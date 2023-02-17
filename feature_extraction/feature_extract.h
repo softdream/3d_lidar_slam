@@ -29,20 +29,6 @@ public:
 		}
 	}
 	
-protected:
-	template<typename OutputCloudType, typename ...OutputCloudsType>
-        void extractFeaturesFromCloudHelper( OutputCloudType&& ouput_cloud, OutputCloudsType... output_clouds )
-        {
-		extractFeaturesFromCloudHelper( output_clouds... );
-        }
-
-	void extractFeaturesFromCloudHelper()
-	{
-	
-	}
-
-protected:
-	
 };
 
 class CornerPlannerFeature : public FeatureBase<CornerPlannerFeature>
@@ -59,8 +45,20 @@ public:
                 std::cout<<"Corner Planner Feature !"<<std::endl;
 
                 this->extractFeaturesFromCloudHelper( input_cloud, output_clouds... );
+
         }
 
+private:
+	template<typename OutputCloudType, typename ...OutputCloudsType>
+        void extractFeaturesFromCloudHelper( OutputCloudType&& ouput_cloud, OutputCloudsType... output_clouds )
+        {
+                extractFeaturesFromCloudHelper( output_clouds... );
+        }
+
+        void extractFeaturesFromCloudHelper()
+        {
+
+        }
 
 };
 
