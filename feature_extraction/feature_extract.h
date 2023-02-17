@@ -35,6 +35,7 @@ protected:
         template<typename OutputCloudType, typename ...OutputCloudsType>
         void extractFeaturesFromCloudHelper( OutputCloudType&& ouput_cloud, OutputCloudsType... output_clouds )
         {
+		std::cout<<"typeid (output_cloud) = "<<typeid(ouput_cloud).name()<<std::endl;
 		output_clouds_ptrs_vec_.push_back( &ouput_cloud );
 
                 extractFeaturesFromCloudHelper( output_clouds... );
@@ -65,9 +66,12 @@ public:
                 std::cout<<"Corner Planner Feature !"<<std::endl;
 
 		// parse the paramters
-                this->extractFeaturesFromCloudHelper( input_cloud, output_clouds... );
-	
+                this->extractFeaturesFromCloudHelper( output_clouds... );
 		
+		std::cout<<"typeid( InputCloudType ) = "<<typeid(InputCloudType).name()<<std::endl;
+
+		auto output_cloud1_ptr = *std::any_cast<typename std::remove_reference<InputCloudType>::type *>( this->output_clouds_ptrs_vec_[0] );
+		auto output_cloud2_ptr = *std::any_cast<typename std::remove_reference<InputCloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
         }
 
 };
