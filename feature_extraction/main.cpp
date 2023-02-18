@@ -6,7 +6,7 @@
 #include "feature_extract.h"
 
 // 
-slam::FileRecord record( "../data/3d_lidar_record_file" );
+slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" );
 slam::PointCloud<slam::Point3F> point_cloud;
 slam::Visualize visual;
 

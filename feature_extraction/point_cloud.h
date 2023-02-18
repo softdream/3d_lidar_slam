@@ -4,12 +4,61 @@
 #include <stdint.h>
 #include <vector>
 
+#include <type_traits>
+
 namespace slam
 {
 
 template<typename T>
+struct is_numerical_type
+{
+        static const bool value = false;
+};
+
+template<>
+struct is_numerical_type<float>
+{
+        static const bool value = true;
+};
+
+template<>
+struct is_numerical_type<double>
+{
+        static const bool value = true;
+};
+
+template<>
+struct is_numerical_type<uint8_t>
+{
+	static const bool value = true;
+};
+
+template<>
+struct is_numerical_type<int8_t>
+{
+	static const bool value = true;
+};
+
+template<>
+struct is_numerical_type<uint32_t>
+{
+        static const bool value = true;
+};
+
+
+template<>
+struct is_numerical_type<int32_t>
+{
+        static const bool value = true;
+};
+
+
+
+template<typename T, typename = typename std::enable_if<is_numerical_type<T>::value>::type>
 struct Point3_
 {
+	using ValueType = T;
+
 	Point3_()
 	{
 
@@ -40,6 +89,8 @@ using Point3F = Point3<float>;
 template<typename T>
 struct PointCloud_
 {
+	using PointType = T;
+
 	PointCloud_()
 	{
 
@@ -62,9 +113,9 @@ struct PointCloud_
 template<typename T>
 using PointCloud = PointCloud_<T>;
 
-using PointCloudI = PointCloud<int>;
-using PointCloudD = PointCloud<double>;
-using PointCloudF = PointCloud<float>;
+using PointCloudI = PointCloud<Point3I>;
+using PointCloudD = PointCloud<Point3D>;
+using PointCloudF = PointCloud<Point3F>;
 
 }
 

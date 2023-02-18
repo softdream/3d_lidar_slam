@@ -94,6 +94,8 @@ public:
 
 		// 1. 
 		std::vector<std::vector<typename CloudType::PointType>> scans_row_data_vec( Config::N_SCANS );
+		std::vector<std::vector<typename CloudType::PointType::ValueType>> scans_row_curv_vec( Config::N_SCANS );
+
 		for ( size_t i = 0; i < input_cloud.points.size(); i ++ ) {
 			typename CloudType::PointType pt = input_cloud.points[i];
 			
@@ -118,15 +120,32 @@ public:
 			}
 
 			if ( scan_idx > -1 && scan_idx < Config::N_SCANS ) {
-				
+				scans_row_data_vec[scan_idx].push_back( pt );			
 			}
 			
 		}
 	
+		// 2. 
+		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
+			scans_row_curv_vec[i].resize( scans_row_data_vec[i].size() );
+
+			for( size_t j = 5; j < scans_row_data_vec[i].size() - 5; j ++ ) {
+				typename CloudType::PointType::ValueType diff_x = scans_row_data_vec[i][j - 5].x + scans_row_data_vec[i][j - 4].x + scans_row_data_vec[i][j - 3].x + scans_row_data_vec[i][j - 2].x + scans_row_data_vec[i][j - 1].x - 10 * scans_row_data_vec[i][j].x + scans_row_data_vec[i][j + 1].x + scans_row_data_vec[i][j + 2].x + scans_row_data_vec[i][j + 3].x + scans_row_data_vec[i][j + 4].x + scans_row_data_vec[i][j + 5].x;
+
+				typename CloudType::PointType::ValueType diff_y = scans_row_data_vec[i][j - 5].y + scans_row_data_vec[i][j - 4].y + scans_row_data_vec[i][j - 3].y + scans_row_data_vec[i][j - 2].y + scans_row_data_vec[i][j - 1].y - 10 * scans_row_data_vec[i][j].y + scans_row_data_vec[i][j + 1].y + scans_row_data_vec[i][j + 2].y + scans_row_data_vec[i][j + 3].y + scans_row_data_vec[i][j + 4].y + scans_row_data_vec[i][j + 5].y;
+
+				typename CloudType::PointType::ValueType diff_z = scans_row_data_vec[i][j - 5].z + scans_row_data_vec[i][j - 4].z + scans_row_data_vec[i][j - 3].z + scans_row_data_vec[i][j - 2].z + scans_row_data_vec[i][j - 1].z - 10 * scans_row_data_vec[i][j].z + scans_row_data_vec[i][j + 1].z + scans_row_data_vec[i][j + 2].z + scans_row_data_vec[i][j + 3].z + scans_row_data_vec[i][j + 4].z + scans_row_data_vec[i][j + 5].z;
+			
+				scans_row_curv_vec[i][j] = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
+			} 			
+		}
+	
+		// 3. 
 
 		auto output_cloud1_ptr = *std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[0] );
 		auto output_cloud2_ptr = *std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
-        }
+        	this->output_clouds_ptrs_vec_.clear();
+	}
 
 };
 
