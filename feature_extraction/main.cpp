@@ -16,6 +16,8 @@ void loadLidarDataThread()
 
 	// 1. source point cloud
         record.readOneFrame( point_cloud );
+	record.readOneFrame( point_cloud );
+	record.readOneFrame( point_cloud );	
 
 	std::cout<<"source point cloud : "<<std::endl;
        	std::cout<<"time_stamp = "<<point_cloud.time_stamp<<std::endl;
@@ -39,6 +41,13 @@ void loadLidarDataThread()
 
 	std::cout<<"plane feature point cloud size = "<<point_cloud_plane.points.size()<<std::endl;
 	std::cout<<"corner feature point cloud size = "<<point_cloud_corner.width<<std::endl;
+
+	visual.displayOnePointCloud( point_cloud_plane, slam::PointColor::Yellow );
+        visual.spinWindow();
+
+	visual.displayOnePointCloud( point_cloud_corner, slam::PointColor::Green );
+        visual.spinWindow();
+
 
 	std::cout<<"file end !"<<std::endl;
 	record.closeFile();
