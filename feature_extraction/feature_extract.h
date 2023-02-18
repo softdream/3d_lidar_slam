@@ -94,6 +94,7 @@ public:
 
 		// 1. 
 		std::vector<std::vector<typename CloudType::PointType>> scans_row_data_vec( Config::N_SCANS );
+		std::vector<std::vector<typename CloudType::PointType::ValueType>> point_index_vec( Config::N_SCANS );
 		std::vector<std::vector<typename CloudType::PointType::ValueType>> scans_row_curv_vec( Config::N_SCANS );
 
 		for ( size_t i = 0; i < input_cloud.points.size(); i ++ ) {
@@ -121,6 +122,7 @@ public:
 
 			if ( scan_idx > -1 && scan_idx < Config::N_SCANS ) {
 				scans_row_data_vec[scan_idx].push_back( pt );			
+				point_index_vec[scan_idx].push_back( i );
 			}
 			
 		}
@@ -141,9 +143,29 @@ public:
 		}
 	
 		// 3. 
-
 		auto output_cloud1_ptr = *std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[0] );
-		auto output_cloud2_ptr = *std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
+                auto output_cloud2_ptr = *std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
+
+		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
+			int j_start_index = 0;
+			int window_interval = static_cast<int>( scans_row_data_vec[i].size() / 6 );
+			
+			for ( size_t j = 0; j < scans_row_data_vec[i].size(); j ++ ) {
+				if ( j >= j_start_index ) {
+					// plane feature
+					if ( scans_row_curv_vec[i][j] < 0.5 ) {
+						output_cloud1_ptr->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );	
+					}
+					// corner feature
+					else if( scans_row_curv_vec[i][j] > 2.0 ) {
+						output_cloud2_ptr->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );
+					}
+
+					j_start_index = j + window_interval;
+				}
+			}
+		}
+
         	this->output_clouds_ptrs_vec_.clear();
 	}
 

@@ -10,6 +10,12 @@ public:
 	static constexpr int N_SCANS = 16;
 	static constexpr int Row_Index_Start = 0;
 	static constexpr int Row_Index_End = 0;
+
+	template<typename T>
+	static constexpr T plane_feature_thresh = 0.5;
+	
+	template<typename T>
+	static constexpr T corner_feature_thresh = 2.0;
 };
 
 //constexpr int Config::N_SCANS = 16;
