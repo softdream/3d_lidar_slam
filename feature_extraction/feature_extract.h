@@ -152,12 +152,12 @@ public:
 
 		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
 			int j_start_index = 0;
-			int window_interval = static_cast<int>( scans_row_data_vec[i].size() / 6 );
+			//int window_interval = static_cast<int>( scans_row_data_vec[i].size() / 6 );
 			
 			for ( size_t j = 0; j < scans_row_data_vec[i].size(); j ++ ) {
 				if ( j >= j_start_index ) {
 					// plane feature
-					if ( scans_row_curv_vec[i][j] < 1 ) {
+					if ( scans_row_curv_vec[i][j] < 0.05 ) {
 						output_cloud1_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );	
 					}
 					// corner feature
@@ -165,7 +165,8 @@ public:
 						output_cloud2_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );
 					}
 
-					j_start_index = j + window_interval;
+					//j_start_index = j + window_interval;
+					j_start_index = j + 10;
 				}
 			}
 		}
