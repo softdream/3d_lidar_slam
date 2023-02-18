@@ -5,31 +5,40 @@
 #include <thread>
 #include "feature_extract.h"
 
-// 
-slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" );
-slam::PointCloud<slam::Point3F> point_cloud;
-slam::Visualize visual;
 
 void loadLidarDataThread()
 {
 	std::cout<<"----------- frame -----------"<<std::endl;
 
+	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" );
+	slam::PointCloud<slam::Point3F> point_cloud;
+	slam::Visualize visual;
+
+	// 1. source point cloud
         record.readOneFrame( point_cloud );
 
+	std::cout<<"source point cloud : "<<std::endl;
        	std::cout<<"time_stamp = "<<point_cloud.time_stamp<<std::endl;
         std::cout<<"cloud width = "<<point_cloud.width<<std::endl;
         std::cout<<"cloud height = "<<point_cloud.height<<std::endl;
 
-       	for( int i = 0; i < 10; i ++ ){
-       		std::cout<<"( "<<point_cloud.points[i].x <<", "<<
-                point_cloud.points[i].y<<", "<<
-                point_cloud.points[i].z <<" )"<<" ";
-        }
-        std::cout<<std::endl;
 
 	visual.initWindow( "window" );
 	visual.displayOnePointCloud( point_cloud );
 	visual.spinWindow();
+
+
+	// 2. features extraction
+	slam::PointCloud<slam::Point3F> point_cloud_plane, point_cloud_corner;
+	std::cout<<"addr point_cloud_plane = "<<&point_cloud_plane<<std::endl;
+	std::cout<<"addr point_cloud_corner = "<<&point_cloud_corner<<std::endl;	
+
+	slam::CornerPlannerFeature corner_planner_feature;
+	
+	slam::extractFeaturesFromCloud( corner_planner_feature, point_cloud, point_cloud_plane, point_cloud_corner ); 
+
+	std::cout<<"plane feature point cloud size = "<<point_cloud_plane.points.size()<<std::endl;
+	std::cout<<"corner feature point cloud size = "<<point_cloud_corner.width<<std::endl;
 
 	std::cout<<"file end !"<<std::endl;
 	record.closeFile();
