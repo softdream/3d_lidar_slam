@@ -53,31 +53,21 @@ void loadLidarDataThread()
         nanoflann::KNNResultSet<float> result_set( 5 );
         result_set.init( &out_ids[0], &out_dists_sqr[0] );
 
-	//
-	std::cout<<"point = "<<kd_point_cloud.obj_.points[0].x<<", "<<kd_point_cloud.obj_.points[0].y<<", "<<kd_point_cloud.obj_.points[0].z<<std::endl;
 
         index.findNeighbors( result_set, kd_point_cloud.point2vec(0).data() );
 
         for( int i = 0; i < out_ids.size(); i ++ ){
                 std::cout<<"out_ids = "<<out_ids[i]<<", out dists sqr = "<<out_dists_sqr[i]<<std::endl;
-        
-		std::cout<<"idx : "<<out_ids[i]<<" ( "<<kd_point_cloud.obj_.points[out_ids[i]].x<<", "<<kd_point_cloud.obj_.points[out_ids[i]].y<<", "<<kd_point_cloud.obj_.points[out_ids[i]].z<<" )"<<std::endl;
-	
-		auto pt_src = kd_point_cloud.obj_.points[0];
-		auto pt_dst = kd_point_cloud.obj_.points[ out_ids[i] ];
-		std::cout<<"dist = "<<::sqrt( ( pt_src.x - pt_dst.x ) * ( pt_src.x - pt_dst.x ) + ( pt_src.y - pt_dst.y ) * ( pt_src.y - pt_dst.y ) + ( pt_src.z - pt_dst.z ) * ( pt_src.z - pt_dst.z ) )<<std::endl;
-		std::cout<<std::endl;
-	}
+        }
 
 
 
-
-	/*visual.displayOnePointCloud( point_cloud_plane, slam::PointColor::Yellow );
+	visual.displayOnePointCloud( point_cloud_plane, slam::PointColor::Yellow );
         visual.spinWindow();
 
 	visual.displayOnePointCloud( point_cloud_corner, slam::PointColor::Green );
         visual.spinWindow();
-*/
+
 
 	std::cout<<"file end !"<<std::endl;
 	record.closeFile();
