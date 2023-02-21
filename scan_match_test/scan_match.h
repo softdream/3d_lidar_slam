@@ -35,8 +35,11 @@ class Point2PointICP : public ScanMatchBase<Point2PointICP<T>>
 {
 public:
 	using ValueType = T;
-	using PointCloudType = typename PointCloud<ValueType>;
+	using PointCloudType = PointCloud<Point3<ValueType>>;
 
+	using TransformationType = typename Eigen::Matrix<ValueType, 4, 4>;
+	using RotationType = typename Eigen::Matrix<ValueType, 3, 3>;
+	using TranslationType = typename Eigen::Matrix<ValueType, 3, 1>;
 
 	Point2PointICP()
 	{
@@ -67,7 +70,7 @@ public:
 private:
 	void estimateOnce( const PointCloudType& first_point_cloud,
                            PointCloudType& second_point_cloud,
-                           State::TransformationType<ValueType>& pose )
+                           TransformationType& pose )
 	{
 		// 3.1 for all the point of the second point cloud, do pose transformation
 		pointCloudTransform( second_point_cloud, pose );
@@ -97,32 +100,47 @@ private:
 			//TODO... add some other policies for removing invalid points
 			//
 
-			State::Vector3<ValueType> closed_pt_in_first( first_point_cloud.points[closed_point_idx].x,
-				       				      first_point_cloud.points[closed_point_idx].y,
-								      first_point_cloud.points[closed_point_idx].z);
+			Eigen::Matrix<ValueType, 3, 1> closed_pt_in_first( first_point_cloud.points[closed_point_idx].x,
+				       				      	   first_point_cloud.points[closed_point_idx].y,
+								      	   first_point_cloud.points[closed_point_idx].z);
 		
 			// 3.2.3 caculate the error vector
-			State::Vector3<ValueType> error = State::Vector3<ValueType>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) - closed_pt_in_first;
+			Eigen::Matrix<ValueType, 3, 1> error = Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) - closed_pt_in_first;
 
 			// 3.2.4 caculate the Jacobian 
 			Eigen::Matrix<ValueType, 3, 6> Jacobian = Eigen::Matrix<ValueType, 3, 6>::Zero();
-			Jacobian.leftCols<3>() = Eigen::Matrix<ValueType, 3, 3>::Identity();
+			Jacobian.block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
 
-			State::RotationType<ValueType> rotation = pose.block<3, 3>(0, 0);
-			State::Translation<ValueType> translation = pose.block<3, 1>( 0, 3 );
+			rotation_matrix_ = pose.block<3,3>(0, 0);
+			translation_vector_  = pose.block<3, 1>( 0, 3 );
 
-			//Jacobian.rightCols<3>() = -rotation * SO3::hat()
+			Jacobian.block<3, 3>( 0, 3 ) = -rotation_matrix_ * SO3::hat( Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) ); 
+			Hessian += Jacobian.transpose() * Jacobian;
+			B += -Jacobian.transpose() * error;
 		}
+
+		if ( Hessian.determinant() == 0 ) {
+			return;
+		}
+
+		Eigen::Matrix<ValueType, 6, 1> delta = Hessian.inverse() * B;
+
+		translation_vector_ += delta.block<0, 3>(0, 0);
+		auto delta_rotation = SO3::exp( delta.tail<0, 3>(0, 3) );
+		rotation_matrix_ *= delta_rotation;
+	
+		pose.block<3,3>(0, 0) = rotation_matrix_;
+		pose.block<3, 1>( 0, 3 ) = translation_vector_;
 	}
 
-	void pointCloudTransform( PointCloudType& point_cloud, State::TransformationType<ValueType>& transform ) 
+	void pointCloudTransform( PointCloudType& point_cloud, TransformationType& transform ) 
 	{
 		
 	}
 
 	void pointCloudTransform( const PointCloudType& point_cloud_befor,
 		       		  PointCloudType& point_cloud_after,
-		       		  State::TransformationType<ValueType>& transform )
+		       		  TransformationType& transform )
 	{
 		
 	}
@@ -133,6 +151,9 @@ private:
 
 	Eigen::Matrix<ValueType, 6, 6> Hessian = Eigen::Matrix<ValueType, 6, 6>::Zero();
 	Eigen::Matrix<ValueType, 6, 1> B = Eigen::Matrix<ValueType, 6, 1>::Zero();
+
+	RotationType rotation_matrix_;
+	RotationType translation_vector_;
 };
 
 }
