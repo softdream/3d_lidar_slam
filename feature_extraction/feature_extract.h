@@ -82,7 +82,7 @@ public:
 	template<typename InputCloudType, typename ...OutputCloudsType>
         void extractFeaturesFromCloud( const InputCloudType& input_cloud, OutputCloudsType&&... output_clouds )
         {
-		static_assert( !(sizeof...( output_clouds ) != 2 ), "The number of arguments is too few !");
+		static_assert( !(sizeof...( output_clouds ) != 3 ), "The number of arguments is too few !");
 		using CloudType = InputCloudType;
 
                 std::cout<<"Corner Planner Feature !"<<std::endl;
@@ -90,12 +90,16 @@ public:
 		// parse the paramters
                 this->extractFeaturesFromCloudHelper( output_clouds... );
 		
-		std::cout<<"typeid( InputCloudType ) = "<<typeid(InputCloudType).name()<<std::endl;
+		//std::cout<<"typeid( InputCloudType ) = "<<typeid(InputCloudType).name()<<std::endl;
+		auto output_cloud1_refer = std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[0] );
+                auto output_cloud2_refer = std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
+                auto output_cloud1_scan_id_refer = std::any_cast<typename std::remove_reference<std::vector<int>>::type *>( this->output_clouds_ptrs_vec_[2] );
 
 		// 1. 
 		std::vector<std::vector<typename CloudType::PointType>> scans_row_data_vec( Config::N_SCANS );
 		std::vector<std::vector<typename CloudType::PointType::ValueType>> point_index_vec( Config::N_SCANS );
 		std::vector<std::vector<typename CloudType::PointType::ValueType>> scans_row_curv_vec( Config::N_SCANS );
+		std::vector<int> point_scan_id_vec( input_cloud.points.size(), -1 );
 
 		std::cout<<"input_cloud.points.size() = "<<input_cloud.points.size()<<std::endl;
 		for ( size_t i = 0; i < input_cloud.points.size(); i ++ ) {
@@ -124,8 +128,9 @@ public:
 			if ( scan_idx > -1 && scan_idx < Config::N_SCANS ) {
 				scans_row_data_vec[scan_idx].push_back( pt );			
 				point_index_vec[scan_idx].push_back( i );
-			}
 			
+				point_scan_id_vec[i] = scan_idx;
+			}
 		}
 
 		// 2. 
@@ -147,8 +152,6 @@ public:
 		}
 	
 		// 3. 
-		auto output_cloud1_refer = std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[0] );
-                auto output_cloud2_refer = std::any_cast<typename std::remove_reference<CloudType>::type *>( this->output_clouds_ptrs_vec_[1] );
 
 		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
 			int j_start_index = 0;
@@ -159,6 +162,8 @@ public:
 					// plane feature
 					if ( scans_row_curv_vec[i][j] < 0.05 ) {
 						output_cloud1_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );	
+						
+						output_cloud1_scan_id_refer->push_back( point_scan_id_vec[ point_index_vec[i][j] ] );
 					}
 					// corner feature
 					else if( scans_row_curv_vec[i][j] > 2.0 ) {

@@ -33,17 +33,15 @@ void loadLidarDataThread()
 
 	// 2. features extraction
 	slam::PointCloud<slam::Point3F> point_cloud_plane, point_cloud_corner;
-	std::cout<<"addr point_cloud_plane = "<<&point_cloud_plane<<std::endl;
-	std::cout<<"addr point_cloud_corner = "<<&point_cloud_corner<<std::endl;	
+	std::vector<int> plane_point_scan_idx;
 
 	slam::CornerPlannerFeature corner_planner_feature;
 	
-	slam::extractFeaturesFromCloud( corner_planner_feature, point_cloud, point_cloud_plane, point_cloud_corner ); 
+	slam::extractFeaturesFromCloud( corner_planner_feature, point_cloud, point_cloud_plane, point_cloud_corner, plane_point_scan_idx ); 
 
 	std::cout<<"plane feature point cloud size = "<<point_cloud_plane.points.size()<<std::endl;
 	std::cout<<"corner feature point cloud size = "<<point_cloud_corner.width<<std::endl;
-
-	// scan match
+	std::cout<<"plane feature point cloud scan idx size = "<<plane_point_scan_idx.size()<<std::endl;
 	
 
 	std::cout<<"file end !"<<std::endl;
