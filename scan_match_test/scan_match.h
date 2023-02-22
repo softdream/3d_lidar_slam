@@ -212,8 +212,8 @@ private:
                            const PointCloudType& second_point_cloud,
                            TransformationType& transform )
         {
-               // Hessian.setZero();
-               // B.setZero();
+               	Hessian.setZero();
+               	B.setZero();
 
                 // 4.1 for every point in the second point cloud
                 for ( size_t i = 0; i < second_point_cloud.poits.size(); i ++ ) {
@@ -226,6 +226,9 @@ private:
 private:
 	std::unique_ptr<kdtree::KdTreeType<ValueType>> kdtree_ptr_;
 
+	Eigen::Matrix<ValueType, 6, 6> Hessian_ = Eigen::Matrix<ValueType, 6, 6>::Zero();
+	Eigen::Matrix<ValueType, 6, 1> B_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
+	
 	RotationType rotation_matrix_;
         RotationType translation_vector_;
 };
