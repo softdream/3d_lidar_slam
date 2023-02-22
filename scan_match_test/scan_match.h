@@ -160,7 +160,7 @@ private:
 };
 
 template<typename T>
-class Point2LineICP : public ScanMatchBase<Point2LineICP<T>>
+class Point2PlaneICP : public ScanMatchBase<Point2PlaneICP<T>>
 {
 public:
         using ValueType = T;
@@ -171,12 +171,12 @@ public:
         using RotationType = typename Eigen::Matrix<ValueType, 3, 3>;
         using TranslationType = typename Eigen::Matrix<ValueType, 3, 1>;
 
-	Point2LineICP() 
+	Point2PlaneICP() 
 	{
 
 	}
 
-	~Point2LineICP() 
+	~Point2PlaneICP() 
 	{
 
 	}
