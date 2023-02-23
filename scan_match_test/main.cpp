@@ -11,40 +11,76 @@ void loadLidarDataThread()
 {
 	std::cout<<"----------- frame -----------"<<std::endl;
 
-	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" );
-	slam::PointCloud<slam::Point3F> point_cloud;
+	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/3d_lidar_record_file" );
+	slam::PointCloud<slam::Point3F> first_point_cloud, second_point_cloud;
 	slam::Visualize visual;
 
-	// 1. source point cloud
-        record.readOneFrame( point_cloud );
-	record.readOneFrame( point_cloud );
-	record.readOneFrame( point_cloud );	
+	slam::CornerPlannerFeature corner_planner_feature;
 
-	std::cout<<"source point cloud : "<<std::endl;
-       	std::cout<<"time_stamp = "<<point_cloud.time_stamp<<std::endl;
-        std::cout<<"cloud width = "<<point_cloud.width<<std::endl;
-        std::cout<<"cloud height = "<<point_cloud.height<<std::endl;
 
+	// 1. first point cloud
+        record.readOneFrame( first_point_cloud );
 
 	visual.initWindow( "window" );
-	visual.displayOnePointCloud( point_cloud );
+	visual.displayOnePointCloud( first_point_cloud );
 	visual.spinWindow();
 
 
 	// 2. features extraction
-	slam::PointCloud<slam::Point3F> point_cloud_plane, point_cloud_corner;
-	std::vector<int> plane_point_scan_idx;
-
-	slam::CornerPlannerFeature corner_planner_feature;
+	slam::PointCloud<slam::Point3F> first_point_cloud_plane, first_point_cloud_corner;
 	
-	slam::extractFeaturesFromCloud( corner_planner_feature, point_cloud, point_cloud_plane, point_cloud_corner, plane_point_scan_idx ); 
+	slam::extractFeaturesFromCloud( corner_planner_feature, first_point_cloud, first_point_cloud_plane, first_point_cloud_corner ); 
 
-	std::cout<<"plane feature point cloud size = "<<point_cloud_plane.points.size()<<std::endl;
-	std::cout<<"corner feature point cloud size = "<<point_cloud_corner.width<<std::endl;
-	std::cout<<"plane feature point cloud scan idx size = "<<plane_point_scan_idx.size()<<std::endl;
-	
+	std::cout<<"first point cloud : "<<std::endl;
+	std::cout<<"plane feature point cloud size = "<<first_point_cloud_plane.points.size()<<std::endl;
+	std::cout<<"corner feature point cloud size = "<<first_point_cloud_corner.width<<std::endl;
+	std::cout<<std::endl;
 
-	std::cout<<"file end !"<<std::endl;
+	// 3. second point cloud
+	record.readOneFrame( second_point_cloud );
+        visual.displayOnePointCloud( second_point_cloud );
+        visual.spinWindow();
+
+	// 4. features extraction
+        slam::PointCloud<slam::Point3F> second_point_cloud_plane, second_point_cloud_corner;
+
+        slam::extractFeaturesFromCloud( corner_planner_feature, second_point_cloud, second_point_cloud_plane, second_point_cloud_corner );
+
+	std::cout<<"second point cloud : "<<std::endl;
+        std::cout<<"plane feature point cloud size = "<<second_point_cloud_plane.points.size()<<std::endl;
+        std::cout<<"corner feature point cloud size = "<<second_point_cloud_corner.width<<std::endl;
+	std::cout<<std::endl;
+
+	// 5. scan match test
+	std::cout<<"------------------------------- SCAN MATCH TEST --------------------------------"<<std::endl;
+
+	// 5.1 for corner feature points
+	/*slam::Point2PointICP<float> p2l_icp;
+	Eigen::Matrix<float, 4, 4> transform;
+	transform << 1, 0, 0, 0,
+		     0, 1, 0, 0,
+		     0, 0, 1, 0,
+		     0, 0, 0, 1;
+
+	slam::scanMatch( p2l_icp, first_point_cloud_corner, second_point_cloud_corner, transform, 1 );
+
+	std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
+*/
+
+	// 5.2 for plane feature points
+	slam::Point2PlaneICP<float> p2p_icp;
+	Eigen::Matrix<float, 4, 4> transform;
+        transform << 1, 0, 0, 0,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1;
+
+	slam::scanMatch( p2p_icp, first_point_cloud_plane, second_point_cloud_plane, transform, 1 );
+
+        std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
+
+
+	std::cout<<"end !"<<std::endl;
 	record.closeFile();
 	visual.destroyWindow();
 }

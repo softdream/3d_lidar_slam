@@ -65,7 +65,6 @@ protected:
         template<typename OutputCloudType, typename ...OutputCloudsType>
         void extractFeaturesFromCloudHelper( OutputCloudType&& ouput_cloud, OutputCloudsType&&... output_clouds )
         {
-		std::cout<<"address == "<< &ouput_cloud<<std::endl;
 		output_clouds_ptrs_vec_.push_back( &ouput_cloud );
 
                 extractFeaturesFromCloudHelper( output_clouds... );
@@ -142,9 +141,9 @@ public:
 		// 2. 
 		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
 			scans_row_curv_vec[i].resize( scans_row_data_vec[i].size() );
-			std::cout<<"scan idx = "<<i<<std::endl;
+		//	std::cout<<"scan idx = "<<i<<std::endl;
 					
-			std::cout<<"scans_row_data_vec["<<i<<"].size() = "<<scans_row_data_vec[i].size()<<std::endl;
+		//	std::cout<<"scans_row_data_vec["<<i<<"].size() = "<<scans_row_data_vec[i].size()<<std::endl;
 
 			for( size_t j = 5; j < scans_row_data_vec[i].size() - 5; j ++ ) {
 				typename CloudType::PointType::ValueType diff_x = scans_row_data_vec[i][j - 5].x + scans_row_data_vec[i][j - 4].x + scans_row_data_vec[i][j - 3].x + scans_row_data_vec[i][j - 2].x + scans_row_data_vec[i][j - 1].x - 10 * scans_row_data_vec[i][j].x + scans_row_data_vec[i][j + 1].x + scans_row_data_vec[i][j + 2].x + scans_row_data_vec[i][j + 3].x + scans_row_data_vec[i][j + 4].x + scans_row_data_vec[i][j + 5].x;
