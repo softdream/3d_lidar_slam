@@ -33,9 +33,11 @@ public:
 	static const Matrix3x3<T> exp( const Vector3<T>& rotation_vector ) 
 	{
 		
-		Eigen::AngleAxisd rotation_vec( rotation_vector.norm(), rotation_vector.normalized() );
+		Eigen::AngleAxis<T> rotation_vec( rotation_vector.norm(), rotation_vector.normalized() );
 		return rotation_vec.toRotationMatrix();
 	}
+
+
 };
 
 

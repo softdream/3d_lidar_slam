@@ -63,7 +63,7 @@ public:
 	void scanMatch( const PointCloudType& first_point_cloud, 
 			const PointCloudType& second_point_cloud,
 			TransformationType& transform,
-			const int max_iterations = 10 )
+			const int max_iterations )
 	{
 		// 1. error process
 		if ( first_point_cloud.points.size() == 0 || first_point_cloud.points.size() == 0 ) {
@@ -72,12 +72,12 @@ public:
 
 		// 2. construct the kd tree of the first point cloud
 		kdtree::KdTreePointCloudType<ValueType> kd_first_point_cloud( first_point_cloud );
-		kdtree_ptr_ = std::make_unique<kdtree::KdTreeType<ValueType>>( 3, kd_first_point_cloud, {10} );
+		kdtree_ptr_ = std::make_unique<kdtree::KdTreeType<ValueType>>( 3, kd_first_point_cloud, 10 );
 
 		// 3. get the initial transformation
-		rotation_matrix_ = transform.block<3,3>(0, 0);
-                translation_vector_  = transform.block<3, 1>( 0, 3 );
-		
+		rotation_matrix_ = transform.template block<3,3>(0, 0);
+                translation_vector_  = transform.template block<3, 1>( 0, 3 );
+
 		// 4. start transform
 		int iter = 0;
 		while ( iter <= max_iterations ) {
@@ -95,18 +95,19 @@ private:
 		B_.setZero();
 
 		// 4.1 for every point in the second point cloud
-		for ( size_t i = 0; i < second_point_cloud.poits.size(); i ++ ) {
-			auto pt_in_second = second_point_cloud.poits[i];
-			
+		for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
+			auto pt_in_second = second_point_cloud.points[i];
+			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z );
+
 			// 4.1.1 transform the second frame point to the first frame coordinate system
-			auto pt_in_transformed = rotation_matrix_ * pt_in_second + translation_vector_;
+			auto pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_;
 
 			// 3.2.1 for point transformed, find the closed point in the first point cloud 
 			ValueType min_dist = 0;
 			size_t closed_point_idx = -1;
 			nanoflann::KNNResultSet<ValueType> ret_set( 1 );
 
-			ValueType query_pt[3] = { pt_in_transformed.x, pt_in_transformed.y, pt_in_transformed.z };
+			ValueType query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
 			ret_set.init( &closed_point_idx, &min_dist );
 
 			kdtree_ptr_->findNeighbors( ret_set, query_pt );
@@ -124,7 +125,7 @@ private:
 								      	   first_point_cloud.points[closed_point_idx].z);
 		
 			// 3.2.3 caculate the error vector
-			Eigen::Matrix<ValueType, 3, 1> error = Eigen::Matrix<ValueType, 3, 1>( pt_in_transformed.x, pt_in_transformed.y, pt_in_transformed.z ) - closed_pt_in_first;
+			Eigen::Matrix<ValueType, 3, 1> error = pt_in_transformed - closed_pt_in_first;
 
 			// 
 			//if ( error.norm() > threshold ) {
@@ -133,9 +134,9 @@ private:
 
 			// 3.2.4 caculate the Jacobian 
 			Eigen::Matrix<ValueType, 3, 6> Jacobian = Eigen::Matrix<ValueType, 3, 6>::Zero();
-			Jacobian.block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
+			Jacobian.template block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
 
-			Jacobian.block<3, 3>( 0, 3 ) = -rotation_matrix_ * SO3::hat( Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) ); 
+			Jacobian.template block<3, 3>( 0, 3 ) = -rotation_matrix_ * SO3::hat( pt_in_second_vec ); 
 			Hessian_ += Jacobian.transpose() * Jacobian;
 			B_ += -Jacobian.transpose() * error;
 		}
@@ -146,12 +147,12 @@ private:
 
 		Eigen::Matrix<ValueType, 6, 1> delta = Hessian_.inverse() * B_;
 
-		translation_vector_ += delta.block<3, 1>(0, 0);
-		auto delta_rotation = SO3::exp( delta.block<3, 1>(3, 0) );
-		rotation_matrix_ *= delta_rotation;
-	
-		transform.block<3,3>(0, 0) = rotation_matrix_;
-		transform.block<3, 1>( 0, 3 ) = translation_vector_;
+                translation_vector_ += delta.template block<3, 1>(0, 0);
+		Eigen::Matrix<ValueType, 3, 1> delta_rotation_tmp = delta.template block<3, 1>(3, 0);
+                rotation_matrix_ *= SO3::exp( delta_rotation_tmp );
+
+                transform.template block<3, 3>(0, 0) = rotation_matrix_;
+                transform.template block<3, 1>( 0, 3 ) = translation_vector_;
 	}
 	
 private:
@@ -161,8 +162,8 @@ private:
 	Eigen::Matrix<ValueType, 6, 6> Hessian_ = Eigen::Matrix<ValueType, 6, 6>::Zero();
 	Eigen::Matrix<ValueType, 6, 1> B_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
 
-	RotationType rotation_matrix_;
-	RotationType translation_vector_;
+	RotationType rotation_matrix_ = RotationType::Zero();
+	TranslationType translation_vector_ = TranslationType::Zero();
 };
 
 template<typename T>
@@ -190,7 +191,7 @@ public:
 	void scanMatch( const PointCloudType& first_point_cloud,
                         const PointCloudType& second_point_cloud,
                         TransformationType& transform,
-                        const int max_iterations = 10 )
+                        const int max_iterations )
         {
                 // 1. error process
                 if ( first_point_cloud.points.size() == 0 || first_point_cloud.points.size() == 0 ) {
@@ -199,11 +200,11 @@ public:
 
                 // 2. construct the kd tree of the first point cloud
                 kdtree::KdTreePointCloudType<ValueType> kd_first_point_cloud( first_point_cloud );
-                kdtree_ptr_ = std::make_unique<kdtree::KdTreeType<ValueType>>( 3, kd_first_point_cloud, {10} );
+                kdtree_ptr_ = std::make_unique<kdtree::KdTreeType<ValueType>>( 3, kd_first_point_cloud, 10 );
 
                 // 3. get the initial transformation
-                rotation_matrix_ = transform.block<3,3>(0, 0);
-                translation_vector_  = transform.block<3, 1>( 0, 3 );
+                rotation_matrix_ = transform.template block<3, 3>(0, 0);
+                translation_vector_  = transform.template block<3, 1>( 0, 3 );
 
                 // 4. start transform
                 int iter = 0;
@@ -222,8 +223,8 @@ private:
                	B_.setZero();
 
                 // 4.1 for every point in the second point cloud
-                for ( size_t i = 0; i < second_point_cloud.poits.size(); i ++ ) {
-                        auto pt_in_second = second_point_cloud.poits[i];
+                for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
+                        auto pt_in_second = second_point_cloud.points[i];
 
                         // 4.1.1 transform the second frame point to the first frame coordinate system
                         auto pt_in_transformed = rotation_matrix_ * pt_in_second + translation_vector_;
@@ -242,8 +243,8 @@ private:
 
 			auto tmp = ( pt_in_transformed_vec.transpose() * normal_vec ) / ( pt_in_transformed_vec.transpose() * normal_vec ).norm();
 
-			Jacobian.block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec * tmp;
-			Jacobian.block<3, 1>(3, 0) = ( -SO3::hat( rotation_matrix_ * Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) ) ).transpose() * tmp;
+			Jacobian.template block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec * tmp;
+			Jacobian.template block<3, 1>(3, 0) = ( -SO3::hat( rotation_matrix_ * Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) ) ).transpose() * tmp;
 		
 			Hessian_ += Jacobian * Jacobian.transpose();
 			B_ += -Jacobian * error;
@@ -255,12 +256,12 @@ private:
 
                 Eigen::Matrix<ValueType, 6, 1> delta = Hessian_.inverse() * B_;
 
-                translation_vector_ += delta.block<3, 1>(0, 0);
-                auto delta_rotation = SO3::exp( delta.block<3, 1>(3, 0) );
-                rotation_matrix_ *= delta_rotation;
+                translation_vector_ += delta.template block<3, 1>(0, 0);
+		Eigen::Matrix<ValueType, 3, 1> delta_rotation_tmp = delta.template block<3, 1>(3, 0);
+                rotation_matrix_ *= SO3::exp( delta_rotation_tmp );
 
-                transform.block<3, 3>(0, 0) = rotation_matrix_;
-                transform.block<3, 1>( 0, 3 ) = translation_vector_;
+                transform.template block<3, 3>(0, 0) = rotation_matrix_;
+                transform.template block<3, 1>( 0, 3 ) = translation_vector_;
 
 	}
 
@@ -361,15 +362,15 @@ private:
 	Eigen::Matrix<ValueType, 6, 1> B_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
 	
 	RotationType rotation_matrix_;
-        RotationType translation_vector_;
+        TranslationType translation_vector_;
 };
 
 template<typename DerivedType, typename PointCloudType, typename TransformationType>
-void scanMatch( ScanMatchBase<DerivedType, PointCloudType, TransformationType>&& instance, 
+void scanMatch( ScanMatchBase<DerivedType, PointCloudType, TransformationType>& instance, 
 	     	const PointCloudType& first_point_cloud,
                 const PointCloudType& second_point_cloud,
                 TransformationType& transform,
-                const int max_iterations )
+                const int max_iterations = 10 )
 {
 	instance.scanMatch( first_point_cloud, second_point_cloud, transform, max_iterations );
 }
