@@ -54,16 +54,31 @@ void loadLidarDataThread()
 	// 5. scan match test
 	std::cout<<"------------------------------- SCAN MATCH TEST --------------------------------"<<std::endl;
 
-	slam::Point2PointICP<float> p2l_icp;
+	// 5.1 for corner feature points
+	/*slam::Point2PointICP<float> p2l_icp;
 	Eigen::Matrix<float, 4, 4> transform;
 	transform << 1, 0, 0, 0,
 		     0, 1, 0, 0,
 		     0, 0, 1, 0,
 		     0, 0, 0, 1;
 
-	slam::scanMatch( p2l_icp, first_point_cloud_corner, second_point_cloud_corner, transform );
+	slam::scanMatch( p2l_icp, first_point_cloud_corner, second_point_cloud_corner, transform, 1 );
 
 	std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
+*/
+
+	// 5.2 for plane feature points
+	slam::Point2PlaneICP<float> p2p_icp;
+	Eigen::Matrix<float, 4, 4> transform;
+        transform << 1, 0, 0, 0,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1;
+
+	slam::scanMatch( p2p_icp, first_point_cloud_plane, second_point_cloud_plane, transform, 1 );
+
+        std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
+
 
 	std::cout<<"end !"<<std::endl;
 	record.closeFile();

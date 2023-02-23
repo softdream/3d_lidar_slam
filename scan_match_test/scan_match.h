@@ -80,8 +80,13 @@ public:
 
 		// 4. start transform
 		int iter = 0;
+		ValueType pre_mse = 100;;
+		//while ( iter <= max_iterations && std::abs( mse_ - pre_mse ) > 0.1 ) {
 		while ( iter <= max_iterations ) {
+			mse_ = 0;
 			estimateOnce( first_point_cloud, second_point_cloud, transform );
+			std::cout<<"mse = "<<mse_<<std::endl;
+			pre_mse = mse_;
 			iter ++;
 		}
 	}
@@ -96,13 +101,13 @@ private:
 
 		// 4.1 for every point in the second point cloud
 		for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
-			auto pt_in_second = second_point_cloud.points[i];
-			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z );
+			auto pt_in_second = second_point_cloud.points[i]; // get the point
+			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
 
 			// 4.1.1 transform the second frame point to the first frame coordinate system
-			auto pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_;
+			auto pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_; 
 
-			// 3.2.1 for point transformed, find the closed point in the first point cloud 
+			// 4.1.2 for point transformed, find the closed point in the first point cloud 
 			ValueType min_dist = 0;
 			size_t closed_point_idx = -1;
 			nanoflann::KNNResultSet<ValueType> ret_set( 1 );
@@ -112,11 +117,13 @@ private:
 
 			kdtree_ptr_->findNeighbors( ret_set, query_pt );
 
-			// 3.2.2 the invalid points need to be removed according to the distance
-			//if( min_dist > min_dist_thresh ) {
-			//	continue;	
-			//}
-			//
+			//std::cout<<"min_dist["<<i<<"] = "<<min_dist<<std::endl;
+
+			// 4.1.3 the invalid points need to be removed according to the distance
+			if ( min_dist > Config::icp_pt_min_dist_thresh<ValueType> ) {
+				continue;	
+			}
+			
 			//TODO... add some other policies for removing invalid points
 			//
 
@@ -124,15 +131,20 @@ private:
 				       				      	   first_point_cloud.points[closed_point_idx].y,
 								      	   first_point_cloud.points[closed_point_idx].z);
 		
-			// 3.2.3 caculate the error vector
+			// 4.1.4 caculate the error vector
 			Eigen::Matrix<ValueType, 3, 1> error = pt_in_transformed - closed_pt_in_first;
+			//std::cout<<"error["<<i<<"] = "<<error.transpose()<<std::endl;
 
-			// 
-			//if ( error.norm() > threshold ) {
-			//	continue;
-			//}
+			// remove the invalid matched points
+			if ( error.norm() > Config::icp_pt_min_dist_thresh<ValueType> ) {
+				continue;
+			}
 
-			// 3.2.4 caculate the Jacobian 
+			//std::cout<<"error["<<i<<"] = "<<error.transpose()<<std::endl;
+	
+			mse_ += error.norm(); // caculate mse 
+
+			// 4.1.5 caculate the Jacobian 
 			Eigen::Matrix<ValueType, 3, 6> Jacobian = Eigen::Matrix<ValueType, 3, 6>::Zero();
 			Jacobian.template block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
 
@@ -145,12 +157,16 @@ private:
 			return;
 		}
 
+		// 4.2 caculate the increments of the transformation
 		Eigen::Matrix<ValueType, 6, 1> delta = Hessian_.inverse() * B_;
 
+		// 4.3 update the translation & rotation matrix
                 translation_vector_ += delta.template block<3, 1>(0, 0);
+
 		Eigen::Matrix<ValueType, 3, 1> delta_rotation_tmp = delta.template block<3, 1>(3, 0);
                 rotation_matrix_ *= SO3::exp( delta_rotation_tmp );
 
+		// 4.4 update the transformation matrix
                 transform.template block<3, 3>(0, 0) = rotation_matrix_;
                 transform.template block<3, 1>( 0, 3 ) = translation_vector_;
 	}
@@ -164,6 +180,8 @@ private:
 
 	RotationType rotation_matrix_ = RotationType::Zero();
 	TranslationType translation_vector_ = TranslationType::Zero();
+
+	ValueType mse_ = 0;
 };
 
 template<typename T>
@@ -225,27 +243,36 @@ private:
                 // 4.1 for every point in the second point cloud
                 for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
                         auto pt_in_second = second_point_cloud.points[i];
+			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
 
                         // 4.1.1 transform the second frame point to the first frame coordinate system
-                        auto pt_in_transformed = rotation_matrix_ * pt_in_second + translation_vector_;
-		
+                        auto pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_;
+
+			// 4.1.2 caculate the normal vector
 			Eigen::Matrix<ValueType, 3, 1> seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>::Zero();
 			Eigen::Matrix<ValueType, 3, 1> normal_vec;
 			if( !getPlaneNormalVector( first_point_cloud, pt_in_transformed, seed_pt_vec, normal_vec ) ) {
 				continue;
 			}
 
-			Eigen::Matrix<ValueType, 3, 1> pt_in_transformed_vec( pt_in_transformed.x, pt_in_transformed.y, pt_in_transformed.z );
+			// 4.1.3 caculate the error
+			auto error = ( pt_in_transformed - seed_pt_vec ).dot( normal_vec );
+			if ( error > Config::icp_pt_min_dist_thresh<ValueType> ) {
+                                continue;
+                        }
+		
 
-			auto error = ( pt_in_transformed_vec - seed_pt_vec ).dot( normal_vec );
-
+			// 4.1.4 caculate the Jacobian
 			Eigen::Matrix<ValueType, 6, 1> Jacobian = Eigen::Matrix<ValueType, 6, 1>::Zero();
 
-			auto tmp = ( pt_in_transformed_vec.transpose() * normal_vec ) / ( pt_in_transformed_vec.transpose() * normal_vec ).norm();
-
-			Jacobian.template block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec * tmp;
-			Jacobian.template block<3, 1>(3, 0) = ( -SO3::hat( rotation_matrix_ * Eigen::Matrix<ValueType, 3, 1>( pt_in_second.x, pt_in_second.y, pt_in_second.z ) ) ).transpose() * tmp;
+			//auto tmp = error / error.norm();
+				
+			Jacobian.template block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec /* tmp*/;
 		
+			Eigen::Matrix<ValueType, 3, 1> rotated_pt = rotation_matrix_ * pt_in_second_vec;
+			Jacobian.template block<3, 1>(3, 0) = ( -SO3::hat( rotated_pt ) ).transpose() * normal_vec;
+		
+			// 4.1.5 caculate the Hessian matrix and B matrix of the Gaussian-Newton Method
 			Hessian_ += Jacobian * Jacobian.transpose();
 			B_ += -Jacobian * error;
 		}
@@ -254,12 +281,15 @@ private:
                         return;
                 }
 
+		// 4.2 caculate the increments of the transformation
                 Eigen::Matrix<ValueType, 6, 1> delta = Hessian_.inverse() * B_;
 
+		// 4.3 update the translation & rotation matrix
                 translation_vector_ += delta.template block<3, 1>(0, 0);
 		Eigen::Matrix<ValueType, 3, 1> delta_rotation_tmp = delta.template block<3, 1>(3, 0);
                 rotation_matrix_ *= SO3::exp( delta_rotation_tmp );
 
+		// 4.4 update the transformation matrix
                 transform.template block<3, 3>(0, 0) = rotation_matrix_;
                 transform.template block<3, 1>( 0, 3 ) = translation_vector_;
 
@@ -267,7 +297,7 @@ private:
 
 private:
 	bool getPlaneNormalVector( const PointCloudType& first_point_cloud, 
-				   const PointType& pt_in_transformed,
+				   const Eigen::Matrix<ValueType, 3, 1>& pt_in_transformed,
 				   Eigen::Matrix<ValueType, 3, 1>& seed_pt_vec,
 		       		   Eigen::Matrix<ValueType, 3, 1>& normal_vec )
 	{
@@ -275,7 +305,7 @@ private:
                 size_t seed_point_idx = -1;
                 nanoflann::KNNResultSet<ValueType> ret_set( 1 );
 
-                ValueType query_pt[3] = { pt_in_transformed.x, pt_in_transformed.y, pt_in_transformed.z };
+                ValueType query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
                 ret_set.init( &seed_point_idx, &min_dist );
 
                 kdtree_ptr_->findNeighbors( ret_set, query_pt );
@@ -286,7 +316,7 @@ private:
                 std::vector<size_t> plane_closed_idx( 20 );
                 std::vector<ValueType> plane_min_dists( 20 );
                 nanoflann::KNNResultSet<ValueType> plane_ret_set( 20 );
-                ValueType plane_query_pt = { seed_point.x, seed_point.y, seed_point.z };
+                ValueType plane_query_pt[3] = { seed_point.x, seed_point.y, seed_point.z };
 		
 		plane_ret_set.init( &plane_closed_idx[0], &plane_min_dists[0] );
 
