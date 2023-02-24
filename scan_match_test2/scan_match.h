@@ -377,7 +377,11 @@ public:
                 // 4. start transform
                 int iter = 0;
                 while ( iter <= max_iterations ) {
+			mse_ = 0;
                         estimateOnce( first_point_cloud, second_point_cloud, transform );
+
+			std::cout<<"mse = "<<mse_<<std::endl;
+
                         iter ++;
                 }
         }
@@ -401,7 +405,8 @@ private:
 			// 4.1.2 caculate the normal vector
 			Eigen::Matrix<ValueType, 3, 1> seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>::Zero();
 			Eigen::Matrix<ValueType, 3, 1> normal_vec;
-			
+			//std::cout<<"normal vec ["<<i<<"] = "<<normal_vec.transpose()<<std::endl;
+
 			if( !CacuNormalPolicy::getPlaneNormalVector( kdtree_ptr_, first_point_cloud, pt_in_transformed, seed_pt_vec, normal_vec ) ) {
 				continue;
 			}
@@ -412,6 +417,7 @@ private:
                                 continue;
                         }
 		
+			mse_ += error; // caculate mse
 
 			// 4.1.4 caculate the Jacobian
 			Eigen::Matrix<ValueType, 6, 1> Jacobian = Eigen::Matrix<ValueType, 6, 1>::Zero();
@@ -452,8 +458,10 @@ private:
 	Eigen::Matrix<ValueType, 6, 6> Hessian_ = Eigen::Matrix<ValueType, 6, 6>::Zero();
 	Eigen::Matrix<ValueType, 6, 1> B_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
 	
-	RotationType rotation_matrix_;
-        TranslationType translation_vector_;
+	RotationType rotation_matrix_ = RotationType::Zero();
+        TranslationType translation_vector_ = TranslationType::Zero();
+
+	 ValueType mse_ = 0;
 };
 
 template<typename DerivedType, typename PointCloudType, typename TransformationType>

@@ -18,7 +18,7 @@ public:
 	static constexpr T corner_feature_thresh = 2.0;
 
 	template<typename T>
-	static constexpr T icp_pt_min_dist_thresh = 0.1;
+	static constexpr T icp_pt_min_dist_thresh = 1;
 };
 
 //constexpr int Config::N_SCANS = 16;
