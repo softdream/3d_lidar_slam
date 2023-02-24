@@ -6,6 +6,13 @@
 #include <opencv2/opencv.hpp>
 namespace slam
 {
+/***
+ * 基于这样的假设：
+ * 雷达的坐标系 X轴正方向为车辆前进方向，Y轴正方向指向左侧， Z轴正方向指向天空
+ * 
+*/
+
+
 template<typename PointType>
 void generateRangeImage(const PointCloud<PointType> &point_cloud_in, cv::Mat &range_mat) {
     Config config;
