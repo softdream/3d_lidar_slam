@@ -5,6 +5,8 @@
 #include "kdtree_point_cloud_adapter.h"
 #include "so3.h"
 
+#include <chrono>
+
 namespace slam
 {
 
@@ -84,8 +86,13 @@ public:
 		//while ( iter <= max_iterations && std::abs( mse_ - pre_mse ) > 0.1 ) {
 		while ( iter <= max_iterations ) {
 			mse_ = 0;
+			//auto t1 = std::chrono::steady_clock::now();
 			estimateOnce( first_point_cloud, second_point_cloud, transform );
-			std::cout<<"mse = "<<mse_<<std::endl;
+			//auto t2 = std::chrono::steady_clock::now();
+			//double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+                        //std::cout<<dr_ms<<" "<<mse_<<std::endl;
+			
+			//std::cout<<"mse = "<<mse_<<std::endl;
 			pre_mse = mse_;
 			iter ++;
 		}
@@ -101,6 +108,8 @@ private:
 
 		// 4.1 for every point in the second point cloud
 		for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
+			auto t1 = std::chrono::steady_clock::now();
+
 			auto pt_in_second = second_point_cloud.points[i]; // get the point
 			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
 
@@ -151,6 +160,10 @@ private:
 			Jacobian.template block<3, 3>( 0, 3 ) = -rotation_matrix_ * SO3::hat( pt_in_second_vec ); 
 			Hessian_ += Jacobian.transpose() * Jacobian;
 			B_ += -Jacobian.transpose() * error;
+
+			auto t2 = std::chrono::steady_clock::now();
+			double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+			std::cout<<"algorithm ["<<i<<"] duration : "<<dr_ms<<std::endl;
 		}
 
 		if ( Hessian_.determinant() == 0 ) {
@@ -333,6 +346,55 @@ public:
 
 };
 
+class ThirdNormalPolicy
+{
+public:
+        template<typename PointCloudType, typename ValueType>
+        static bool getPlaneNormalVector( const std::unique_ptr<kdtree::KdTreeType<ValueType>>& kdtree_ptr,
+                                          const PointCloudType& first_point_cloud,
+                                          const Eigen::Matrix<ValueType, 3, 1>& pt_in_transformed,
+                                          Eigen::Matrix<ValueType, 3, 1>& seed_pt_vec,
+                                          Eigen::Matrix<ValueType, 3, 1>& normal_vec )
+        {
+	//	auto t1 = std::chrono::steady_clock::now();
+
+                std::vector<size_t> plane_closed_idx( 5 );
+                std::vector<ValueType> plane_min_dists( 5 );
+                nanoflann::KNNResultSet<ValueType> plane_ret_set( 5 );
+                ValueType plane_query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
+
+                plane_ret_set.init( &plane_closed_idx[0], &plane_min_dists[0] );
+
+                kdtree_ptr->findNeighbors( plane_ret_set, plane_query_pt );
+
+	//	auto t2 = std::chrono::steady_clock::now();
+	//	double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+	//	std::cout<<"flann search duration : "<<dr_ms<<std::endl;
+
+                if( plane_min_dists[4] >= 1 ) return false;
+
+                Eigen::Matrix<ValueType, 5, 3> Y = Eigen::Matrix<ValueType, 5, 3>::Zero();
+                Eigen::Matrix<ValueType, 5, 1> b;
+                b.fill(-1);
+                normal_vec.setZero();
+
+                for ( size_t i = 0; i < 5; i ++ ) {
+                        Y( i, 0 ) = first_point_cloud.points[ plane_closed_idx[i] ].x;
+                        Y( i, 1 ) = first_point_cloud.points[ plane_closed_idx[i] ].y;
+                        Y( i, 2 ) = first_point_cloud.points[ plane_closed_idx[i] ].z;
+                }
+
+                normal_vec = Y.colPivHouseholderQr().solve( b );
+                normal_vec.normalize(); // normal vector of the plane
+		seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>( first_point_cloud.points[ plane_closed_idx[0] ].x,
+			       				      first_point_cloud.points[ plane_closed_idx[0] ].y,
+							      first_point_cloud.points[ plane_closed_idx[0] ].z	);
+
+                return true;
+
+        }
+
+};
 
 template<typename T, typename CacuNormalPolicy = FirstNormalPolicy>
 class Point2PlaneICP : public ScanMatchBase<Point2PlaneICP<T, CacuNormalPolicy>, PointCloud<Point3<T>>, Eigen::Matrix<T, 4, 4> >
@@ -376,11 +438,15 @@ public:
 
                 // 4. start transform
                 int iter = 0;
-                while ( iter <= max_iterations ) {
+                while ( iter < max_iterations ) {
 			mse_ = 0;
+			auto t1 = std::chrono::steady_clock::now();
                         estimateOnce( first_point_cloud, second_point_cloud, transform );
+			auto t2 = std::chrono::steady_clock::now();
+			double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+			std::cout<<dr_ms<<" "<<mse_<<std::endl;
 
-			std::cout<<"mse = "<<mse_<<std::endl;
+			//std::cout<<"mse = "<<mse_<<std::endl;
 
                         iter ++;
                 }
@@ -396,7 +462,8 @@ private:
 
                 // 4.1 for every point in the second point cloud
                 for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
-                        auto pt_in_second = second_point_cloud.points[i];
+			auto t1 = std::chrono::steady_clock::now();
+			auto pt_in_second = second_point_cloud.points[i];
 			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
 
                         // 4.1.1 transform the second frame point to the first frame coordinate system
@@ -432,6 +499,11 @@ private:
 			// 4.1.5 caculate the Hessian matrix and B matrix of the Gaussian-Newton Method
 			Hessian_ += Jacobian * Jacobian.transpose();
 			B_ += -Jacobian * error;
+	
+			auto t2 = std::chrono::steady_clock::now();
+                        double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+                        std::cout<<"algorithm ["<<i<<"] duration : "<<dr_ms<<std::endl;
+
 		}
 
 		if ( Hessian_.determinant() == 0 ) {
