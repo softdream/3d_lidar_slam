@@ -34,14 +34,14 @@ int main (int argc, char** argv)
 
     	sor.setInputCloud(cloud);
 
-    	sor.setLeafSize(0.5, 0.5, 0.5);
+    	sor.setLeafSize(0.7, 0.7, 0.7);
 
     	sor.filter(*filtered_pointcloud);
 	std::cout<<"filtered point cloud size = "<<filtered_pointcloud->width * filtered_pointcloud->height<<std::endl;
 
 
 	// storage
-	outfile.open( "./rabbit", std::ios::app );
+	outfile.open( "./rabbit2", std::ios::app );
         if( !outfile.is_open() ){
                 std::cerr<<"open file failed ..."<<std::endl;
                 exit(-1);
