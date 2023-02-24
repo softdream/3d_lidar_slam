@@ -184,8 +184,158 @@ private:
 	ValueType mse_ = 0;
 };
 
-template<typename T>
-class Point2PlaneICP : public ScanMatchBase<Point2PlaneICP<T>, PointCloud<Point3<T>>, Eigen::Matrix<T, 4, 4> >
+class FirstNormalPolicy
+{
+public:
+	template<typename PointCloudType, typename ValueType>
+	static bool getPlaneNormalVector( const std::unique_ptr<kdtree::KdTreeType<ValueType>>& kdtree_ptr, 
+					  const PointCloudType& first_point_cloud, 
+                                   	  const Eigen::Matrix<ValueType, 3, 1>& pt_in_transformed,
+                                   	  Eigen::Matrix<ValueType, 3, 1>& seed_pt_vec,
+                                   	  Eigen::Matrix<ValueType, 3, 1>& normal_vec )
+        {
+                ValueType min_dist = 0;
+                size_t seed_point_idx = -1;
+                nanoflann::KNNResultSet<ValueType> ret_set( 1 );
+
+                ValueType query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
+                ret_set.init( &seed_point_idx, &min_dist );
+
+                kdtree_ptr->findNeighbors( ret_set, query_pt );
+
+                auto seed_point = first_point_cloud.points[seed_point_idx];
+                seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>( seed_point.x, seed_point.y, seed_point.z );
+
+                std::vector<size_t> plane_closed_idx( 20 );
+                std::vector<ValueType> plane_min_dists( 20 );
+                nanoflann::KNNResultSet<ValueType> plane_ret_set( 20 );
+                ValueType plane_query_pt[3] = { seed_point.x, seed_point.y, seed_point.z };
+                
+                plane_ret_set.init( &plane_closed_idx[0], &plane_min_dists[0] );
+
+                kdtree_ptr->findNeighbors( plane_ret_set, plane_query_pt );
+
+                std::vector<size_t> five_points_idx_vec;
+                std::vector<int> diff_scan_id_point_idx_vec;
+                size_t pre_scan_id = -1;
+                size_t n = 4;
+
+		for ( size_t i = 0; i < plane_closed_idx.size(); i ++ ) {
+                        auto candidate_pt = first_point_cloud.points[ plane_closed_idx[i] ];
+
+                        int scan_id = -1;
+                        ValueType angle = ::atan2( candidate_pt.z, ::sqrt( candidate_pt.x * candidate_pt.x + candidate_pt.y * candidate_pt.y ) ) * 180 / M_PI;
+
+                        if constexpr ( Config::N_SCANS == 16 ) {
+                                if ( angle >= -15 && angle <= 15 ) {
+                                        scan_id = static_cast<int>( ( angle + 15 ) / 2 + 0.5 );
+                                }
+                        }
+                        
+                        if ( i == 0 ) {
+                                pre_scan_id = scan_id;
+                        }
+
+                        if ( i < 5 ) {
+                                five_points_idx_vec.push_back( plane_closed_idx[i] );
+                        }
+                        else {
+                                if ( scan_id != pre_scan_id && scan_id >= 0 && scan_id < 16 ) {
+                                        diff_scan_id_point_idx_vec.push_back( plane_closed_idx[i] );
+                                        
+                                        n = i;
+
+                                        if ( diff_scan_id_point_idx_vec.size() >= 2 ) { break; };
+                                }
+                        }
+                }
+
+                if ( diff_scan_id_point_idx_vec.size() == 1 ) {
+                        five_points_idx_vec[4] = diff_scan_id_point_idx_vec[0];
+                }
+                else if ( diff_scan_id_point_idx_vec.size() == 2 ) {
+                        five_points_idx_vec[3] = diff_scan_id_point_idx_vec[0];
+                        five_points_idx_vec[4] = diff_scan_id_point_idx_vec[1];
+                }
+
+                if( plane_min_dists[n] >= 1 ) return false;
+
+		Eigen::Matrix<ValueType, 5, 3> Y = Eigen::Matrix<ValueType, 5, 3>::Zero();
+                Eigen::Matrix<ValueType, 5, 1> b;
+                b.fill(-1);
+                normal_vec.setZero();
+
+                for ( size_t i = 0; i < 5; i ++ ) {
+                        Y( i, 0 ) = first_point_cloud.points[ five_points_idx_vec[i] ].x;
+                        Y( i, 1 ) = first_point_cloud.points[ five_points_idx_vec[i] ].y;
+                        Y( i, 2 ) = first_point_cloud.points[ five_points_idx_vec[i] ].z;
+                }
+
+                normal_vec = Y.colPivHouseholderQr().solve( b );
+                normal_vec.normalize(); // normal vector of the plane
+
+                return true;
+
+        }
+	
+};
+
+class SecondNormalPolicy
+{
+public:
+        template<typename PointCloudType, typename ValueType>
+        static bool getPlaneNormalVector( const std::unique_ptr<kdtree::KdTreeType<ValueType>>& kdtree_ptr,
+                                          const PointCloudType& first_point_cloud,
+                                          const Eigen::Matrix<ValueType, 3, 1>& pt_in_transformed,
+                                          Eigen::Matrix<ValueType, 3, 1>& seed_pt_vec,
+                                          Eigen::Matrix<ValueType, 3, 1>& normal_vec )
+        {
+                ValueType min_dist = 0;
+                size_t seed_point_idx = -1;
+                nanoflann::KNNResultSet<ValueType> ret_set( 1 );
+
+                ValueType query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
+                ret_set.init( &seed_point_idx, &min_dist );
+
+                kdtree_ptr->findNeighbors( ret_set, query_pt );
+
+                auto seed_point = first_point_cloud.points[seed_point_idx];
+                seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>( seed_point.x, seed_point.y, seed_point.z );
+
+                std::vector<size_t> plane_closed_idx( 5 );
+                std::vector<ValueType> plane_min_dists( 5 );
+                nanoflann::KNNResultSet<ValueType> plane_ret_set( 5 );
+                ValueType plane_query_pt[3] = { seed_point.x, seed_point.y, seed_point.z };
+
+                plane_ret_set.init( &plane_closed_idx[0], &plane_min_dists[0] );
+
+                kdtree_ptr->findNeighbors( plane_ret_set, plane_query_pt );
+
+                if( plane_min_dists[4] >= 1 ) return false;
+
+		Eigen::Matrix<ValueType, 5, 3> Y = Eigen::Matrix<ValueType, 5, 3>::Zero();
+                Eigen::Matrix<ValueType, 5, 1> b;
+                b.fill(-1);
+                normal_vec.setZero();
+
+                for ( size_t i = 0; i < 5; i ++ ) {
+                        Y( i, 0 ) = first_point_cloud.points[ plane_closed_idx[i] ].x;
+                        Y( i, 1 ) = first_point_cloud.points[ plane_closed_idx[i] ].y;
+                        Y( i, 2 ) = first_point_cloud.points[ plane_closed_idx[i] ].z;
+                }
+
+                normal_vec = Y.colPivHouseholderQr().solve( b );
+                normal_vec.normalize(); // normal vector of the plane
+
+                return true;
+
+        }
+
+};
+
+
+template<typename T, typename CacuNormalPolicy = FirstNormalPolicy>
+class Point2PlaneICP : public ScanMatchBase<Point2PlaneICP<T, CacuNormalPolicy>, PointCloud<Point3<T>>, Eigen::Matrix<T, 4, 4> >
 {
 public:
         using ValueType = T;
@@ -246,12 +396,13 @@ private:
 			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
 
                         // 4.1.1 transform the second frame point to the first frame coordinate system
-                        auto pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_;
+                        Eigen::Matrix<ValueType, 3, 1> pt_in_transformed = rotation_matrix_ * pt_in_second_vec + translation_vector_;
 
 			// 4.1.2 caculate the normal vector
 			Eigen::Matrix<ValueType, 3, 1> seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>::Zero();
 			Eigen::Matrix<ValueType, 3, 1> normal_vec;
-			if( !getPlaneNormalVector( first_point_cloud, pt_in_transformed, seed_pt_vec, normal_vec ) ) {
+			
+			if( !CacuNormalPolicy::getPlaneNormalVector( kdtree_ptr_, first_point_cloud, pt_in_transformed, seed_pt_vec, normal_vec ) ) {
 				continue;
 			}
 
@@ -292,96 +443,6 @@ private:
 		// 4.4 update the transformation matrix
                 transform.template block<3, 3>(0, 0) = rotation_matrix_;
                 transform.template block<3, 1>( 0, 3 ) = translation_vector_;
-
-	}
-
-private:
-	bool getPlaneNormalVector( const PointCloudType& first_point_cloud, 
-				   const Eigen::Matrix<ValueType, 3, 1>& pt_in_transformed,
-				   Eigen::Matrix<ValueType, 3, 1>& seed_pt_vec,
-		       		   Eigen::Matrix<ValueType, 3, 1>& normal_vec )
-	{
-		ValueType min_dist = 0;
-                size_t seed_point_idx = -1;
-                nanoflann::KNNResultSet<ValueType> ret_set( 1 );
-
-                ValueType query_pt[3] = { pt_in_transformed(0), pt_in_transformed(1), pt_in_transformed(2) };
-                ret_set.init( &seed_point_idx, &min_dist );
-
-                kdtree_ptr_->findNeighbors( ret_set, query_pt );
-
-                auto seed_point = first_point_cloud.points[seed_point_idx];
-		seed_pt_vec = Eigen::Matrix<ValueType, 3, 1>( seed_point.x, seed_point.y, seed_point.z );
-
-                std::vector<size_t> plane_closed_idx( 20 );
-                std::vector<ValueType> plane_min_dists( 20 );
-                nanoflann::KNNResultSet<ValueType> plane_ret_set( 20 );
-                ValueType plane_query_pt[3] = { seed_point.x, seed_point.y, seed_point.z };
-		
-		plane_ret_set.init( &plane_closed_idx[0], &plane_min_dists[0] );
-
-		kdtree_ptr_->findNeighbors( plane_ret_set, plane_query_pt );
-
-		std::vector<size_t> five_points_idx_vec;
-		std::vector<int> diff_scan_id_point_idx_vec;
-		size_t pre_scan_id = -1;
-		size_t n = 4;
-
-		for ( size_t i = 0; i < plane_closed_idx.size(); i ++ ) {
-			auto candidate_pt = first_point_cloud.points[ plane_closed_idx[i] ];
-
-			int scan_id = -1;
-			ValueType angle = ::atan2( candidate_pt.z, ::sqrt( candidate_pt.x * candidate_pt.x + candidate_pt.y * candidate_pt.y ) ) * 180 / M_PI;
-
-			if constexpr ( Config::N_SCANS == 16 ) {
-                                if ( angle >= -15 && angle <= 15 ) {
-                                        scan_id = static_cast<int>( ( angle + 15 ) / 2 + 0.5 );
-                                }
-                        }
-			
-			if ( i == 0 ) {
-				pre_scan_id = scan_id;
-			}
-
-			if ( i < 5 ) {
-				five_points_idx_vec.push_back( plane_closed_idx[i] );
-			}
-			else {
-				if ( scan_id != pre_scan_id && scan_id >= 0 && scan_id < 16 ) {
-					diff_scan_id_point_idx_vec.push_back( plane_closed_idx[i] );
-					
-					n = i;
-
-					if ( diff_scan_id_point_idx_vec.size() >= 2 ) { break; };
-				}
-			}
-		}
-
-		if ( diff_scan_id_point_idx_vec.size() == 1 ) {
-			five_points_idx_vec[4] = diff_scan_id_point_idx_vec[0];
-		}
-		else if ( diff_scan_id_point_idx_vec.size() == 2 ) {
-			five_points_idx_vec[3] = diff_scan_id_point_idx_vec[0];
-			five_points_idx_vec[4] = diff_scan_id_point_idx_vec[1];
-		}
-
-		if( plane_min_dists[n] >= 1 ) return false;
-
-		Eigen::Matrix<ValueType, 5, 3> Y = Eigen::Matrix<ValueType, 5, 3>::Zero();
-		Eigen::Matrix<ValueType, 5, 1> b;
-		b.fill(-1);
-		normal_vec.setZero();
-
-		for ( size_t i = 0; i < 5; i ++ ) {
-			Y( i, 0 ) = first_point_cloud.points[ five_points_idx_vec[i] ].x;
-			Y( i, 1 ) = first_point_cloud.points[ five_points_idx_vec[i] ].y;
-			Y( i, 2 ) = first_point_cloud.points[ five_points_idx_vec[i] ].z;
-		}
-
-		normal_vec = Y.colPivHouseholderQr().solve( b );
-		normal_vec.normalize(); // normal vector of the plane
-
-		return true;
 
 	}
 
