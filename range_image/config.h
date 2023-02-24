@@ -7,11 +7,12 @@ namespace slam
 class Config
 {
 public:
-	static constexpr int N_SCANS = 64;
-	static constexpr int N_HORIZON = 4000;
-	static constexpr float Angular_Resolution_Horizon = 0.09; // 360 / 4000
-	static constexpr float Angular_Resolution_Vertical = 0.41875; // 26.8/64
-	static constexpr float Angle_Bottom = 13.4;
+	static constexpr int N_SCANS = 16;
+	static constexpr int N_HORIZON = 1800;
+	static constexpr float Angular_Resolution_Horizon = 0.2; // 360 / 1800
+	static constexpr float Angular_Resolution_Vertical = 2; // 30/(16 -1 )
+	static constexpr float Angle_Bottom = -15;
+	static constexpr float Max_Range = 100.0;
 	static constexpr int Row_Index_Start = 0;
 	static constexpr int Row_Index_End = 0;
 
