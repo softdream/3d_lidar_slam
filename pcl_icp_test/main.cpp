@@ -24,7 +24,7 @@ int main (int argc, char** argv)
 	// 1. first point cloud
  	pcl::PointCloud<pcl::PointXYZ>::Ptr first_cloud (new pcl::PointCloud<pcl::PointXYZ>);
  
-  	if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/arm/Test/pcl_icp_test/rabbit3.pcd", *first_cloud) == -1) {
+  	if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/riki/Test/3d_lidar_slam/3d_lidar_slam/pcl_icp_test/rabbit3.pcd", *first_cloud) == -1) {
     		PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
     		return (-1);
   	}
@@ -37,7 +37,7 @@ int main (int argc, char** argv)
 	// 2. second point cloud
 	pcl::PointCloud<pcl::PointXYZ>::Ptr second_cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
-        if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/arm/Test/pcl_icp_test/rabbit4.pcd", *second_cloud) == -1) {
+        if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/riki/Test/3d_lidar_slam/3d_lidar_slam/pcl_icp_test/rabbit4.pcd", *second_cloud) == -1) {
                 PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
                 return (-1);
         }
@@ -54,7 +54,7 @@ int main (int argc, char** argv)
 	auto t1 = std::chrono::steady_clock::now();
 
 	icp.setMaxCorrespondenceDistance(100);
-    	icp.setMaximumIterations(1);//迭代次数
+    	icp.setMaximumIterations(30);//迭代次数
     	icp.setTransformationEpsilon(1e-6);//先前转换和当前估计转换（即两次位姿转换）之间的 epsilon（差异）
     	icp.setEuclideanFitnessEpsilon(1e-6);//欧几里得平方误差的总和
     	icp.setRANSACIterations(0);// 设置RANSAC运行次数    

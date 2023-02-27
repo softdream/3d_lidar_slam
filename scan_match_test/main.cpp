@@ -3,6 +3,9 @@
 #include "visualize.h"
 #include <mutex>
 #include <thread>
+
+#include <chrono>
+
 #include "feature_extract.h"
 
 #include "scan_match.h"
@@ -11,7 +14,7 @@ void loadLidarDataThread()
 {
 	std::cout<<"----------- frame -----------"<<std::endl;
 
-	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/3d_lidar_record_file" );
+	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file4" );
 	slam::PointCloud<slam::Point3F> first_point_cloud, second_point_cloud;
 	slam::Visualize visual;
 
@@ -19,7 +22,8 @@ void loadLidarDataThread()
 
 
 	// 1. first point cloud
-        record.readOneFrame( first_point_cloud );
+	for( int i = 0; i < 10; i ++ )
+        	record.readOneFrame( first_point_cloud );
 
 	visual.initWindow( "window" );
 	visual.displayOnePointCloud( first_point_cloud );
@@ -55,30 +59,41 @@ void loadLidarDataThread()
 	std::cout<<"------------------------------- SCAN MATCH TEST --------------------------------"<<std::endl;
 
 	// 5.1 for corner feature points
-	/*slam::Point2PointICP<float> p2l_icp;
+	slam::Point2PointICP<float> p2l_icp;
 	Eigen::Matrix<float, 4, 4> transform;
 	transform << 1, 0, 0, 0,
 		     0, 1, 0, 0,
 		     0, 0, 1, 0,
 		     0, 0, 0, 1;
 
-	slam::scanMatch( p2l_icp, first_point_cloud_corner, second_point_cloud_corner, transform, 1 );
-
+	auto t1 = std::chrono::steady_clock::now();
+	slam::scanMatch( p2l_icp, first_point_cloud_corner, second_point_cloud_corner, transform, 2 );
+	auto t2 = std::chrono::steady_clock::now();
+        double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+        std::cout<<"point to point icp duration : "<<dr_ms<<std::endl;
+	
 	std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
-*/
+
 
 	// 5.2 for plane feature points
+	//slam::Point2PlaneICP<float, slam::SecondNormalPolicy> p2p_icp;
 	slam::Point2PlaneICP<float> p2p_icp;
-	Eigen::Matrix<float, 4, 4> transform;
+	/*Eigen::Matrix<float, 4, 4> transform;
         transform << 1, 0, 0, 0,
                      0, 1, 0, 0,
                      0, 0, 1, 0,
                      0, 0, 0, 1;
+	*/	
 
-	slam::scanMatch( p2p_icp, first_point_cloud_plane, second_point_cloud_plane, transform, 1 );
+	auto t3 = std::chrono::steady_clock::now();
+	slam::scanMatch( p2p_icp, first_point_cloud_plane, second_point_cloud_plane, transform, 3);
+	auto t4 = std::chrono::steady_clock::now();
+	double dr_ms1 = std::chrono::duration<double,std::milli>(t4-t3).count();
+	std::cout<<"point to plane icp duration : "<<dr_ms1<<std::endl;
+	
 
         std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
-
+	
 
 	std::cout<<"end !"<<std::endl;
 	record.closeFile();

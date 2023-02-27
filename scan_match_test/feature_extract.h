@@ -165,11 +165,11 @@ public:
 			for ( size_t j = 0; j < scans_row_data_vec[i].size(); j ++ ) {
 				if ( j >= j_start_index ) {
 					// plane feature
-					if ( scans_row_curv_vec[i][j] < 0.05 ) {
+					if ( scans_row_curv_vec[i][j] < 0.1 ) {
 						output_cloud1_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );	
 					}
 					// corner feature
-					else if( scans_row_curv_vec[i][j] > 2.0 ) {
+					else if( scans_row_curv_vec[i][j] > 3.0 ) {
 						output_cloud2_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );
 					}
 
