@@ -1,3 +1,0 @@
-/home/riki/Test/3d_lidar_slam/3d_lidar_slam/pcl_icp_odom_test/build/CMakeFiles/rebuild_cache.dir
-/home/riki/Test/3d_lidar_slam/3d_lidar_slam/pcl_icp_odom_test/build/CMakeFiles/test.dir
-/home/riki/Test/3d_lidar_slam/3d_lidar_slam/pcl_icp_odom_test/build/CMakeFiles/edit_cache.dir

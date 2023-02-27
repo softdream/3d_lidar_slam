@@ -141,11 +141,12 @@ public:
 		// 2. 
 		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
 			scans_row_curv_vec[i].resize( scans_row_data_vec[i].size() );
-		//	std::cout<<"scan idx = "<<i<<std::endl;
+			//std::cout<<"scan idx = "<<i<<std::endl;
 					
-		//	std::cout<<"scans_row_data_vec["<<i<<"].size() = "<<scans_row_data_vec[i].size()<<std::endl;
+			//std::cout<<"scans_row_data_vec["<<i<<"].size() = "<<scans_row_data_vec[i].size()<<std::endl;
+			if ( scans_row_data_vec[i].size() < 10 ) continue;
 
-			for( size_t j = 5; j < scans_row_data_vec[i].size() - 5; j ++ ) {
+			for ( size_t j = 5; j < scans_row_data_vec[i].size() - 5; j ++ ) {
 				typename CloudType::PointType::ValueType diff_x = scans_row_data_vec[i][j - 5].x + scans_row_data_vec[i][j - 4].x + scans_row_data_vec[i][j - 3].x + scans_row_data_vec[i][j - 2].x + scans_row_data_vec[i][j - 1].x - 10 * scans_row_data_vec[i][j].x + scans_row_data_vec[i][j + 1].x + scans_row_data_vec[i][j + 2].x + scans_row_data_vec[i][j + 3].x + scans_row_data_vec[i][j + 4].x + scans_row_data_vec[i][j + 5].x;
 
 				typename CloudType::PointType::ValueType diff_y = scans_row_data_vec[i][j - 5].y + scans_row_data_vec[i][j - 4].y + scans_row_data_vec[i][j - 3].y + scans_row_data_vec[i][j - 2].y + scans_row_data_vec[i][j - 1].y - 10 * scans_row_data_vec[i][j].y + scans_row_data_vec[i][j + 1].y + scans_row_data_vec[i][j + 2].y + scans_row_data_vec[i][j + 3].y + scans_row_data_vec[i][j + 4].y + scans_row_data_vec[i][j + 5].y;
@@ -157,7 +158,6 @@ public:
 		}
 	
 		// 3. 
-
 		for ( size_t i = Config::Row_Index_Start; i < Config::N_SCANS - Config::Row_Index_End; i ++ ) {
 			int j_start_index = 0;
 			//int window_interval = static_cast<int>( scans_row_data_vec[i].size() / 6 );
@@ -173,12 +173,10 @@ public:
 						output_cloud2_refer->points.push_back( input_cloud.points[ point_index_vec[i][j] ] );
 					}
 
-					//j_start_index = j + window_interval;
-					j_start_index = j + 10;
+					j_start_index = j + Config::sample_interval;
 				}
 			}
 		}
-		
 		//std::cout<<"output_cloud1_refer.points.size() = "<<output_cloud1_refer->points.size()<<std::endl;
 		//std::cout<<"output_cloud2_refer.points.size() = "<<output_cloud2_refer->points.size()<<std::endl;
 

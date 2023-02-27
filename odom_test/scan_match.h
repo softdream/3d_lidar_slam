@@ -149,6 +149,8 @@ private:
 			Jacobian.template block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
 
 			Jacobian.template block<3, 3>( 0, 3 ) = -rotation_matrix_ * SO3::hat( pt_in_second_vec ); 
+
+
 			Hessian_ += Jacobian.transpose() * Jacobian;
 			B_ += -Jacobian.transpose() * error;
 		}

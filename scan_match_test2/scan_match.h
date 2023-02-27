@@ -84,13 +84,13 @@ public:
 		int iter = 0;
 		ValueType pre_mse = 100;;
 		//while ( iter <= max_iterations && std::abs( mse_ - pre_mse ) > 0.1 ) {
-		while ( iter <= max_iterations ) {
+		while ( iter < max_iterations ) {
 			mse_ = 0;
-			//auto t1 = std::chrono::steady_clock::now();
+			auto t1 = std::chrono::steady_clock::now();
 			estimateOnce( first_point_cloud, second_point_cloud, transform );
-			//auto t2 = std::chrono::steady_clock::now();
-			//double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
-                        //std::cout<<dr_ms<<" "<<mse_<<std::endl;
+			auto t2 = std::chrono::steady_clock::now();
+			double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
+                        std::cout<<dr_ms<<" "<<mse_<<std::endl;
 			
 			//std::cout<<"mse = "<<mse_<<std::endl;
 			pre_mse = mse_;
@@ -108,7 +108,6 @@ private:
 
 		// 4.1 for every point in the second point cloud
 		for ( size_t i = 0; i < second_point_cloud.points.size(); i ++ ) {
-			auto t1 = std::chrono::steady_clock::now();
 
 			auto pt_in_second = second_point_cloud.points[i]; // get the point
 			Eigen::Matrix<ValueType, 3, 1> pt_in_second_vec( pt_in_second.x, pt_in_second.y, pt_in_second.z ); // conver to eigen type
@@ -153,6 +152,7 @@ private:
 	
 			mse_ += error.norm(); // caculate mse 
 
+			auto t1 = std::chrono::steady_clock::now();
 			// 4.1.5 caculate the Jacobian 
 			Eigen::Matrix<ValueType, 3, 6> Jacobian = Eigen::Matrix<ValueType, 3, 6>::Zero();
 			Jacobian.template block<3, 3>( 0, 0 ) = Eigen::Matrix<ValueType, 3, 3>::Identity();
@@ -163,7 +163,7 @@ private:
 
 			auto t2 = std::chrono::steady_clock::now();
 			double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
-			std::cout<<"algorithm ["<<i<<"] duration : "<<dr_ms<<std::endl;
+			//std::cout<<"duration ["<<i<<"] : "<<dr_ms<<std::endl;
 		}
 
 		if ( Hessian_.determinant() == 0 ) {
@@ -487,22 +487,20 @@ private:
 			mse_ += error; // caculate mse
 
 			// 4.1.4 caculate the Jacobian
-			Eigen::Matrix<ValueType, 6, 1> Jacobian = Eigen::Matrix<ValueType, 6, 1>::Zero();
-
 			//auto tmp = error / error.norm();
 				
-			Jacobian.template block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec /* tmp*/;
+			Jacobian_.template block<3, 1>(0, 0) = Eigen::Matrix<ValueType, 3, 3>::Identity() * normal_vec /* tmp*/;
 		
 			Eigen::Matrix<ValueType, 3, 1> rotated_pt = rotation_matrix_ * pt_in_second_vec;
-			Jacobian.template block<3, 1>(3, 0) = ( -SO3::hat( rotated_pt ) ).transpose() * normal_vec;
+			Jacobian_.template block<3, 1>(3, 0) = ( -SO3::hat( rotated_pt ) ).transpose() * normal_vec;
 		
 			// 4.1.5 caculate the Hessian matrix and B matrix of the Gaussian-Newton Method
-			Hessian_ += Jacobian * Jacobian.transpose();
-			B_ += -Jacobian * error;
+			Hessian_ += Jacobian_ * Jacobian_.transpose();
+			B_ += -Jacobian_ * error;
 	
 			auto t2 = std::chrono::steady_clock::now();
                         double dr_ms = std::chrono::duration<double,std::milli>(t2-t1).count();
-                        std::cout<<"algorithm ["<<i<<"] duration : "<<dr_ms<<std::endl;
+                        //std::cout<<"algorithm ["<<i<<"] duration : "<<dr_ms<<std::endl;
 
 		}
 
@@ -529,11 +527,12 @@ private:
 
 	Eigen::Matrix<ValueType, 6, 6> Hessian_ = Eigen::Matrix<ValueType, 6, 6>::Zero();
 	Eigen::Matrix<ValueType, 6, 1> B_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
-	
+	Eigen::Matrix<ValueType, 6, 1> Jacobian_ = Eigen::Matrix<ValueType, 6, 1>::Zero();
+
 	RotationType rotation_matrix_ = RotationType::Zero();
         TranslationType translation_vector_ = TranslationType::Zero();
 
-	 ValueType mse_ = 0;
+	ValueType mse_ = 0;
 };
 
 template<typename DerivedType, typename PointCloudType, typename TransformationType>

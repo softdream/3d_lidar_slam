@@ -28,6 +28,36 @@ void convert2PclCloud( const slam::PointCloud<slam::Point3F>& point_cloud,
 	}
 }
 
+void pointCloudTransform( pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const Eigen::Matrix4f& transform )
+{
+	Eigen::Matrix3f R = transform.block<3, 3>(0, 0);
+	Eigen::Vector3f T = transform.block<3, 1>(0, 3);
+
+	for ( size_t i = 0; i < cloud->points.size(); i ++ ) {
+		Eigen::Vector3f pt( cloud->points[i].x, cloud->points[i].y, cloud->points[i].z );
+
+		pt = R * pt + T;
+
+		cloud->points[i].x = pt[0];
+		cloud->points[i].y = pt[1];
+		cloud->points[i].z = pt[2];
+	}
+}
+
+void pointCloudTransform( const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, 
+			  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out,
+			  const Eigen::Matrix4f& transform )
+{
+        Eigen::Matrix3f R = transform.block<3, 3>(0, 0);
+        Eigen::Vector3f T = transform.block<3, 1>(0, 3);
+
+        for ( size_t i = 0; i < cloud_in->points.size(); i ++ ) {
+                Eigen::Vector3f pt( cloud_in->points[i].x, cloud_in->points[i].y, cloud_in->points[i].z );
+
+                pt = R * pt + T;
+		cloud_out->push_back( { pt(0), pt(1), pt(2) } );
+        }
+}
 
 
 int main (int argc, char** argv)
@@ -38,7 +68,7 @@ int main (int argc, char** argv)
                 exit( -1 );
         }
 
-	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file4" );
+	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/kitti_loop_loam" );
 
 	pcl::visualization::CloudViewer viewer("Viewer");
 
@@ -47,6 +77,10 @@ int main (int argc, char** argv)
 	pcl::PointCloud<pcl::PointXYZ>::Ptr pre_cloud( new pcl::PointCloud<pcl::PointXYZ> );
 
 	Eigen::Matrix<float, 4, 4> pose = Eigen::Matrix<float, 4, 4>::Identity();
+	Eigen::Matrix4f last_pose = pose;
+
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr mapping_cloud( new pcl::PointCloud<pcl::PointXYZ> );
 
 	int count = 0;
         while( !record.endOfFile() ){
@@ -68,7 +102,7 @@ int main (int argc, char** argv)
         	sor.filter( *filtered_cloud );
 		std::cout<<"filtered point cloud size = "<<filtered_cloud->points.size()<<std::endl;
 
-		viewer.showCloud( filtered_cloud );
+		//viewer.showCloud( filtered_cloud );
 
 		// 3. icp scan match
 		if( count == 1 ) {
@@ -78,7 +112,7 @@ int main (int argc, char** argv)
 
 		pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 		icp.setMaxCorrespondenceDistance(100);
-        	icp.setMaximumIterations(30);//迭代次数
+        	icp.setMaximumIterations(100);//迭代次数
         	icp.setTransformationEpsilon(1e-6);
        	 	icp.setEuclideanFitnessEpsilon(1e-6);//欧几里得平方误差的总和
         	icp.setRANSACIterations(0);// 设置RANSAC运行次数    
@@ -95,11 +129,26 @@ int main (int argc, char** argv)
 		Eigen::Matrix4f transform = icp.getFinalTransformation();
 
 		// update the pose
-               // pose = transform * pose;
-		pose = pose * transform;
-                outfile <<"pose "<< pose(0, 3)<<" "<<pose(1, 3)<<std::endl;
+		pose = last_pose * transform;
+		last_pose = pose;
+
+		outfile <<"pose "<< pose(0, 3)<<" "<<pose(1, 3)<<std::endl;
+	
 
 		*pre_cloud = *filtered_cloud;
+
+		if( count % 10 == 0 ) {
+			//pointCloudTransform( filtered_cloud, pose );
+			//*mapping_cloud += *filtered_cloud;
+			pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+			//pcl::transformPointCloud( *filtered_cloud, *transformed_cloud, pose );
+			pointCloudTransform( filtered_cloud, pose );
+
+			//*mapping_cloud += *transformed_cloud;
+			*mapping_cloud += *filtered_cloud;
+
+			viewer.showCloud( mapping_cloud );
+		}
 
 		usleep(100000);
 	}

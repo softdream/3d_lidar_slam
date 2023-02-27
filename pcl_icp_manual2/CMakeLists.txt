@@ -9,8 +9,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
-
 project(test)   
+
 
 #find required eigen
 FIND_PACKAGE( Eigen3 )

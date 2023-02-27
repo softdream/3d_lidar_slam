@@ -16,7 +16,6 @@
 
 #include "file_record.h"
 
-#include "scan_match.h"
 
 std::ofstream outfile;
 
@@ -42,7 +41,7 @@ int main (int argc, char** argv)
                 exit( -1 );
         }
 
-        slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file2" );
+        slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/3d_lidar_record_file2" );
 
         pcl::visualization::CloudViewer viewer("Viewer");
 
@@ -51,6 +50,8 @@ int main (int argc, char** argv)
         pcl::PointCloud<pcl::PointXYZ>::Ptr pre_cloud( new pcl::PointCloud<pcl::PointXYZ> );
 
         Eigen::Matrix<float, 4, 4> pose = Eigen::Matrix<float, 4, 4>::Identity();
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr mapping_cloud( new pcl::PointCloud<pcl::PointXYZ> );
 
         int count = 0;
 	while( !record.endOfFile() ){
@@ -72,7 +73,7 @@ int main (int argc, char** argv)
                 sor.filter( *filtered_cloud );
                 std::cout<<"filtered point cloud size = "<<filtered_cloud->points.size()<<std::endl;
 
-                viewer.showCloud( filtered_cloud );
+                //viewer.showCloud( filtered_cloud );
 
 		// 3. icp scan match
                 if( count == 1 ) {
@@ -100,21 +101,26 @@ int main (int argc, char** argv)
 		*/
 
 		Eigen::Matrix<float, 4, 4> transform = Eigen::Matrix<float, 4, 4>::Identity();
-		/*test::Point2PointICP<float> icp_m;
-        	icp_m.scanMatch( pre_cloud, *filtered_cloud, transform, 1 );
-		*/
+		test::Point2PointICP<float> icp_m;
+        	icp_m.scanMatch( pre_cloud, *filtered_cloud, transform, 20 );
+		
 	
-		/*slam::Point2PlaneICP<float> p2p_icp;
-		slam::scanMatch( p2p_icp, pre_point_cloud_plane, point_cloud_plane, transform, 7);
-                std::cout<<"estimated transformation : "<<std::endl<<transform<<std::endl;
-*/
-
                 // update the pose
-               // pose = transform * pose;
                 pose = pose * transform;
                 outfile <<"pose "<< pose(0, 3)<<" "<<pose(1, 3)<<std::endl;
 
                 *pre_cloud = *filtered_cloud;
+
+
+		if( count % 20 == 0 ) {
+			pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+                        pcl::transformPointCloud( *filtered_cloud, *transformed_cloud, pose );
+
+                        *mapping_cloud += *transformed_cloud;
+
+                        viewer.showCloud( mapping_cloud );
+
+		}
 
                 usleep(100000);
         }
