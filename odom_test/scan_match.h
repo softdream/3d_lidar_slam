@@ -8,6 +8,7 @@
 namespace slam
 {
 
+// CRTP Base Class
 template<typename DerivedType, 
 	 typename PointCloudType,
 	 typename TransformationType>
@@ -24,6 +25,7 @@ public:
 	
 	}
 	
+	// interface
 	void scanMatch( const PointCloudType& first_point_cloud,
 		     	const PointCloudType& second_point_cloud,
 		     	TransformationType& transform,
@@ -36,6 +38,8 @@ public:
 	}
 };
 
+
+// Point to Point ICP method
 template<typename T>
 class Point2PointICP : public ScanMatchBase<Point2PointICP<T>, PointCloud<Point3<T>>, Eigen::Matrix<T, 4, 4> >
 {
@@ -186,6 +190,7 @@ private:
 	ValueType mse_ = 0;
 };
 
+// Policy for caculating the plane normal vectors
 class FirstNormalPolicy
 {
 public:
@@ -282,6 +287,7 @@ public:
 	
 };
 
+// Policy for caculating the plane normal vectors
 class SecondNormalPolicy
 {
 public:
@@ -335,7 +341,7 @@ public:
 
 };
 
-
+// Point to Plane ICP method
 template<typename T, typename CacuNormalPolicy = FirstNormalPolicy>
 class Point2PlaneICP : public ScanMatchBase<Point2PlaneICP<T, CacuNormalPolicy>, PointCloud<Point3<T>>, Eigen::Matrix<T, 4, 4> >
 {
@@ -464,6 +470,8 @@ private:
 	ValueType mse_ = 0;
 };
 
+
+// CRTP Helper function
 template<typename DerivedType, typename PointCloudType, typename TransformationType>
 void scanMatch( ScanMatchBase<DerivedType, PointCloudType, TransformationType>& instance, 
 	     	const PointCloudType& first_point_cloud,

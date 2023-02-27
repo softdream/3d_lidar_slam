@@ -12,6 +12,8 @@
 namespace slam
 {
 
+
+// CRTP Base Class 
 template<typename DerivedType>
 class FeatureBase
 {
@@ -26,6 +28,7 @@ public:
 	
 	}
 
+	// interface 1 : Support multiple parameters
 	template<typename InputCloudType, typename ...OutputCloudsType>
 	void extractFeaturesFromCloud( const InputCloudType& input_cloud, OutputCloudsType&&... output_clouds )
 	{
@@ -283,6 +286,7 @@ public:
 
 };
 
+// CRTP Helper function
 template<typename DerivedType, typename InputCloudType, typename ...OutputCloudsType>
 void extractFeaturesFromCloud( FeatureBase<DerivedType> instance, const InputCloudType& input_cloud, OutputCloudsType&&... output_clouds )
 {
