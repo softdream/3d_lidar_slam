@@ -238,7 +238,18 @@ public:
                                         scan_id = static_cast<int>( ( angle + 15 ) / 2 + 0.5 );
                                 }
                         }
-                        
+ 			else if constexpr( Config::N_SCANS == 64 ) {
+                                if ( angle >= -24.33 && angle <= 2 ) {
+                                        if ( angle >= -8.83 ) {
+                                                scan_idx = static_cast<int>( ( 2 - angle ) * 3.0 + 0.5 );
+                                        }
+                                        else {
+                                                scan_idx = Config::N_SCANS / 2 + static_cast<int>( ( -8.83 - angle ) * 2.0 + 0.5 );
+                                        }
+                                }
+                        }
+
+
                         if ( i == 0 ) {
                                 pre_scan_id = scan_id;
                         }
