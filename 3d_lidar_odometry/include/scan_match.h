@@ -241,10 +241,10 @@ public:
  			else if constexpr( Config::N_SCANS == 64 ) {
                                 if ( angle >= -24.33 && angle <= 2 ) {
                                         if ( angle >= -8.83 ) {
-                                                scan_idx = static_cast<int>( ( 2 - angle ) * 3.0 + 0.5 );
+                                                scan_id = static_cast<int>( ( 2 - angle ) * 3.0 + 0.5 );
                                         }
                                         else {
-                                                scan_idx = Config::N_SCANS / 2 + static_cast<int>( ( -8.83 - angle ) * 2.0 + 0.5 );
+                                                scan_id = Config::N_SCANS / 2 + static_cast<int>( ( -8.83 - angle ) * 2.0 + 0.5 );
                                         }
                                 }
                         }
