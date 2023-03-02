@@ -19,7 +19,7 @@ void loadLidarDataThread()
 	std::cout<<"----------- frame -----------"<<std::endl;
 
 
-	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/kitti_loop_loam" );
+	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/kitti_loop_loam" );
 	slam::PointCloud<slam::Point3F> point_cloud;
 	slam::Visualize visual;
 	visual.initWindow( "window" );
@@ -31,9 +31,12 @@ void loadLidarDataThread()
 		record.readOneFrame( point_cloud );
 
 		std::cout<<"point_cloud size = "<<point_cloud.points.size()<<std::endl;
-	
-		
+		//visual.displayOnePointCloud( point_cloud );
+		//visual.spinWindow();	
 
+		slam::RangeImage<float>::RangeImageType range_image;
+		slam::RangeImage<float>::generateRangeImage( point_cloud, range_image );	
+		visual.displayOneRangeImage( range_image, 0 );
 	}
 
 	std::cout<<"end !"<<std::endl;

@@ -1,9 +1,11 @@
 #ifndef __VISUALiZE_H
 #define __VISUALIZE_H
 
+#include <opencv2/opencv.hpp>
 #include <opencv2/viz.hpp>
 
 #include "point_cloud.h"
+#include "range_image.h"
 
 namespace slam
 {
@@ -86,6 +88,39 @@ public:
 	bool isStopped()
 	{
 		return window_->wasStopped();
+	}
+
+
+	// for range image 
+	template<typename RangeImageType>
+	void displayOneRangeImage( const RangeImageType& range_image, const int ms = 0 )
+	{	
+		int width = range_image.mat.cols();
+		int height = range_image.mat.rows();
+
+		cv::Mat image = cv::Mat( height, width, CV_8UC3 );
+
+		for ( size_t i = 0; i < height; i ++ ) {
+			for ( size_t j = 0; j < width; j ++ ) {
+				int range_int = static_cast<int>( range_image.mat( i, j ) * 2000 );
+				char data[3] = {0};
+				data[0] |= range_int;
+				data[1] |= ( range_int >> 8 );
+				data[2] |= ( range_int >> 16 );
+				image.at<cv::Vec3b>(i, j)[0] = data[2]; 
+				image.at<cv::Vec3b>(i, j)[1] = data[1]; 
+				image.at<cv::Vec3b>(i, j)[2] = data[0];  
+
+				if ( image.at<cv::Vec3b>(i, j)[0] == 255 && image.at<cv::Vec3b>(i, j)[1] == 255 && image.at<cv::Vec3b>(i, j)[2] == 255 ) {
+					std::cout<<"( "<<i <<", "<<j<<" ) : "<<range_image.mat( i, j )<<", "<<range_int<<std::endl;
+				
+				}
+				
+			}
+		}
+
+		cv::imshow("range image", image);
+		cv::waitKey( ms );
 	}
 
 private:

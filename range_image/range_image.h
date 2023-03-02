@@ -44,14 +44,20 @@ struct is_same_scans<SCANS_, SCANS_> : public std::true_type
 
 
 template<typename ValueType, 
-	 int SCANS, 
+	 int SCANS = Config::N_SCANS, 
 	 typename = typename std::enable_if<is_same_scans<SCANS, Config::N_SCANS>::value>::type>
 class RangeImage
 {
 public:
 	struct RangeImageType_
 	{
-		typename std::enable_if<lidar_type_trait<SCANS>::value, Eigen::Matrix<ValueType, lidar_type_trait<SCANS>::rows, lidar_type_trait<SCANS>::cols>>::type mat;
+		//typename std::enable_if<lidar_type_trait<SCANS>::value, Eigen::Matrix<ValueType, lidar_type_trait<SCANS>::rows, lidar_type_trait<SCANS>::cols>>::type mat;
+		RangeImageType_()
+		{
+			mat.resize( lidar_type_trait<SCANS>::rows, lidar_type_trait<SCANS>::cols );
+		}		
+
+		Eigen::Matrix<ValueType, Eigen::Dynamic, Eigen::Dynamic> mat;
 		std::map<std::pair<int, int>, int> idx_map;
 	};
 
@@ -60,12 +66,26 @@ public:
 	template<typename PointCloud>
 	static void generateRangeImage( const PointCloud& point_cloud, RangeImageType& range_image )
 	{
+		range_image.mat.setZero();
+
 		for ( size_t i = 0; i < point_cloud.points.size(); i ++ ) {
 			auto pt = point_cloud.points[i];
 	
 			ValueType vertical_angle = ::atan2( pt.z, ::sqrt( pt.x * pt.x + pt.y * pt.y ) ) * 180 / M_PI;
 	
-			int row_idx = -( vertical_angle + Config::vertical_angle_min<ValueType> ) / Config::vertical_angle_resolution<ValueType>;
+			//int row_idx = -( vertical_angle + Config::vertical_angle_min<ValueType> ) / Config::vertical_angle_resolution<ValueType>;
+			int row_idx = -1;	
+			if constexpr( Config::N_SCANS == 64 ) {
+                                if ( vertical_angle >= -24.33 && vertical_angle <= 2 ) {
+                                        if ( vertical_angle >= -8.83 ) {
+                                                row_idx = static_cast<int>( ( 2 - vertical_angle ) * 3.0 + 0.5 );
+                                        }
+                                        else {
+                                                row_idx = Config::N_SCANS / 2 + static_cast<int>( ( -8.83 - vertical_angle ) * 2.0 + 0.5 );
+                                        }
+                                }
+                        }
+
 
 			if ( row_idx < 0 || row_idx >= SCANS ) continue;
 
