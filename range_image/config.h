@@ -20,7 +20,10 @@ public:
 
 	template<typename T>
 	static constexpr T vertical_angle_min = -24.33;
-	
+		
+	template<typename T>
+	static constexpr T vertical_angle_max = 2;
+
 	template<typename T>
 	static constexpr T range_max = 100;
 

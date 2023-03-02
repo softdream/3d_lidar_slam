@@ -102,7 +102,9 @@ public:
 
 		for ( size_t i = 0; i < height; i ++ ) {
 			for ( size_t j = 0; j < width; j ++ ) {
-				int range_int = static_cast<int>( range_image.mat( i, j ) * 2000 );
+				if ( range_image.mat( i, j ) == 1000 ) continue;
+
+				int range_int = static_cast<int>( range_image.mat( i, j ) * 3000 );
 				char data[3] = {0};
 				data[0] |= range_int;
 				data[1] |= ( range_int >> 8 );
@@ -111,20 +113,19 @@ public:
 				image.at<cv::Vec3b>(i, j)[1] = data[1]; 
 				image.at<cv::Vec3b>(i, j)[2] = data[0];  
 
-				if ( image.at<cv::Vec3b>(i, j)[0] == 255 && image.at<cv::Vec3b>(i, j)[1] == 255 && image.at<cv::Vec3b>(i, j)[2] == 255 ) {
-					std::cout<<"( "<<i <<", "<<j<<" ) : "<<range_image.mat( i, j )<<", "<<range_int<<std::endl;
-				
+				if( data[0] == 255 && data[1] == 255 && data[2] == 255 ) {
+					std::cout<<"( "<<i<<", "<<j<<" ) = "<<range_image.mat( i, j )<<std::endl;
 				}
-				
 			}
 		}
 
 		cv::imshow("range image", image);
 		cv::waitKey( ms );
+		cv::imwrite(std::to_string(count ++) + ".jpg", image);
 	}
 
 private:
-	
+	int count = 0;
 	cv::viz::Viz3d* window_;
 };
 

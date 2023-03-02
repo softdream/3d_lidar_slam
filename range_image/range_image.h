@@ -20,7 +20,7 @@ template<>
 struct lidar_type_trait<64> : public std::true_type
 {
 	static constexpr int rows = 64;
-	static constexpr int cols = 4000;
+	static constexpr int cols = 1000;
 };
 
 template<>
@@ -63,7 +63,7 @@ public:
 
 	using RangeImageType = RangeImageType_;
 
-	template<typename PointCloud>
+	/*template<typename PointCloud>
 	static void generateRangeImage( const PointCloud& point_cloud, RangeImageType& range_image )
 	{
 		range_image.mat.setZero();
@@ -103,6 +103,52 @@ public:
 			range_image.mat( row_idx, cols_idx ) = range;
 			range_image.idx_map[{row_idx, cols_idx}] = i;
 		}
+	}*/
+
+	template<typename PointCloud>
+        static void generateRangeImage( const PointCloud& point_cloud, RangeImageType& range_image )
+        {
+                //range_image.mat.setZero();
+		range_image.mat.fill( 1000 );
+
+                for ( size_t i = 0; i < point_cloud.points.size(); i ++ ) {
+                        auto pt = point_cloud.points[i];
+	
+			ValueType r = ::sqrt( pt.x * pt.x + pt.y * pt.y + pt.z * pt.z );
+			ValueType phi = ::atan2( pt.y, pt.x ); // azimuth angle, rad
+			ValueType theta = ::asin( pt.z / r ) * 180 / M_PI;  // elevation angle
+			
+			// 1. u represent the column index of the range image
+			int u = ::floor( 0.5 * ( 1 + phi / M_PI ) * lidar_type_trait<SCANS>::cols );
+
+			// 2. v represent the row index of the range image
+			int v = ::floor( ( Config::vertical_angle_max<ValueType> - theta ) / ( Config::vertical_angle_max<ValueType> - Config::vertical_angle_min<ValueType> ) * SCANS );
+
+			/*int v = -1;
+			if constexpr( Config::N_SCANS == 64 ) {
+                                if ( theta >= -24.33 && theta <= 2 ) {
+                                        if ( theta >= -8.83 ) {
+                                                v = static_cast<int>( ( 2 - theta ) * 3.0 + 0.5 );
+                                        }
+                                        else {
+                                                v = Config::N_SCANS / 2 + static_cast<int>( ( -8.83 - theta ) * 2.0 + 0.5 );
+                                        }
+                                }
+                        }*/
+
+
+			if ( v < 0 || v >= SCANS ) continue;
+
+			if ( u < 0 || u >= lidar_type_trait<SCANS>::cols ) continue;
+
+			if (  r > range_image.mat( v, u ) || r < 1 ) continue;
+		       	else {	
+				range_image.mat( v, u ) = r;
+				range_image.idx_map[{v, u}] = i;
+			
+			}
+		}
+
 	}
 
 };
