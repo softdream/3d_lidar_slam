@@ -12,7 +12,8 @@
 
 #include <fstream>
 
-#include "range_image.h"
+#include "range_image_feature.h"
+
 
 void loadLidarDataThread()
 {
@@ -28,16 +29,31 @@ void loadLidarDataThread()
         while( !record.endOfFile() ){
 		count ++;
 
+	
 		record.readOneFrame( point_cloud );
 
 		std::cout<<"point_cloud size = "<<point_cloud.points.size()<<std::endl;
 		//visual.displayOnePointCloud( point_cloud );
 		//visual.spinWindow();	
 
-		slam::RangeImage<float>::RangeImageType range_image;
-		slam::RangeImage<float>::generateRangeImage( point_cloud, range_image );	
-		visual.displayOneRangeImage( range_image, 0 );
+	//	slam::RangeImage<float>::RangeImageType range_image;
+	//	slam::RangeImage<float>::generateRangeImage( point_cloud, range_image );	
+	//	visual.displayOneRangeImage( range_image, 0 );
+
+		slam::PointCloud<slam::Point3F> point_cloud_plane, point_cloud_corner;
+		slam::RangeImageFeature range_image_feature;	
+		slam::extractFeaturesFromCloud( range_image_feature, point_cloud, point_cloud_plane, point_cloud_corner );
+	
+		std::cout<<"plane feature point cloud size = "<<point_cloud_plane.points.size()<<std::endl;
+        	std::cout<<"corner feature point cloud size = "<<point_cloud_corner.points.size()<<std::endl;	
+	
+		visual.displayOnePointCloud( point_cloud_plane, slam::PointColor::Yellow );
+		visual.spinWindow();
+	
+		visual.displayOnePointCloud( point_cloud_corner, slam::PointColor::Green );
+                visual.spinWindow();
 	}
+
 
 	std::cout<<"end !"<<std::endl;
 	record.closeFile();
