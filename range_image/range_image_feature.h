@@ -37,23 +37,30 @@ public:
 		// 2. feature exctraction from the range image
 		for ( int i = 2; i < range_image.mat.rows() - 2; i += 5 ) {
 			for ( int j = 2; j < range_image.mat.cols() - 2; j += 5 ) {
+				if ( range_image.mat( i, j ) == 1000 ) continue; // invalid point
+
 				// 2.1 dot product
 				int valid_pt_num = 0;
 				ValueType dot_ret = 0;
 				for ( int m = 0; m < 5; m ++ ) {
 					for ( int n = 0; n < 5; n ++ ) {
 						auto r = range_image.mat( i - 2 + m, j - 2 + n );
-						if ( r != 1000 || ( ( i - 2 + m == i ) && ( j - 2 + n ==j ) ) ) {
+						if ( r != 1000 && ( ( i - 2 + m != i ) && ( j - 2 + n != j ) ) ) {
 							dot_ret += r;
 							valid_pt_num ++;
 						}
 					}
 				}
+				//std::cout<<"valid num = "<<valid_pt_num<<std::endl;
+				//std::cout<<"range_image.mat("<<i<<", "<<j<<") = "<< range_image.mat( i, j )<<std::endl;
+				//std::cout<<"dot ret = "<<dot_ret<<std::endl;
 				ValueType curv = dot_ret - static_cast<ValueType>( valid_pt_num ) * range_image.mat( i, j );
 				if ( std::abs( curv ) < 0.5 ) { 
+					//std::cout<<"curv = "<<curv<<std::endl;
 					output_cloud1_refer->points.push_back( input_cloud.points[range_image.idx_map[{i, j}]] );
 				}
 				else if ( std::abs( curv ) > 2 ) {
+					//std::cout<<"curv = "<<curv<<std::endl;
 					output_cloud2_refer->points.push_back( input_cloud.points[range_image.idx_map[{i, j}]] );
 				}
 			} 

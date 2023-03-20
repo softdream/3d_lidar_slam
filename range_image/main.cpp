@@ -20,7 +20,7 @@ void loadLidarDataThread()
 	std::cout<<"----------- frame -----------"<<std::endl;
 
 
-	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/kitti_loop_loam" );
+	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/data/kitti_loop_loam" );
 	slam::PointCloud<slam::Point3F> point_cloud;
 	slam::Visualize visual;
 	visual.initWindow( "window" );
