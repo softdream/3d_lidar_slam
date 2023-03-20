@@ -8,6 +8,16 @@
 namespace slam
 {
 
+typedef enum PointColor_
+{
+	Red,
+	Yellow,
+	Green,
+	Black,
+	Gray, 
+	Blue,	
+}PointColor;
+
 class Visualize
 {
 public:
@@ -28,7 +38,7 @@ public:
 	}
 
 	template<typename T>
-	void displayOnePointCloud( const slam::PointCloud<T>& point_cloud )
+	void displayOnePointCloud( const slam::PointCloud<T>& point_cloud, const PointColor& color = Red )
 	{
 		std::cout<<"----------visualize the point cloud ---------"<<std::endl;
 	
@@ -45,10 +55,17 @@ public:
  
 		}
 	
-		cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::red() );
+		switch ( color ) {
+			case Red : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::red() ); window_->showWidget("cloud", cloud); break; }
+			case Yellow : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::yellow() ); window_->showWidget("cloud", cloud); break; }
+			case Green : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::green() ); window_->showWidget("cloud", cloud); break; }
+			case Black : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::black() ); window_->showWidget("cloud", cloud); break; }
+			case Gray : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::gray() ); window_->showWidget("cloud", cloud); break; }
+			case Blue : { cv::viz::WCloud cloud( point_cloud_mat, cv::viz::Viz3d::Color::blue() ); window_->showWidget("cloud", cloud); break; }
+			default : break;			
+		}
 		
 		
-		window_->showWidget("cloud", cloud);
 	}
 
 	void destroyWindow()

@@ -5,8 +5,8 @@
 #include <thread>
 
 // 
-slam::FileRecord record( "../data/3d_lidar_record_file" );
-slam::PointCloud<slam::Point3f> point_cloud;
+slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" );
+slam::PointCloud<slam::Point3F> point_cloud;
 std::mutex lidar_mux;
 slam::Visualize visual;
 
@@ -14,7 +14,6 @@ void loadLidarDataThread()
 {
 	int count = 0;
         while( !record.endOfFile() ){
-        //while( count < 1 ){
                 std::cout<<"----------- frame -----------"<<std::endl;
 
 		lidar_mux.lock();
