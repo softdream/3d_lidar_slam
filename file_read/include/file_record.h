@@ -7,7 +7,7 @@
 #include <fstream>
 
 
-namespace record
+namespace slam
 {
 
 class FileRecord
@@ -30,9 +30,9 @@ public:
 
 	bool openFile( const std::string& file_name ) 
 	{
-		m_infile.open( file_name, std::ios::binary );
+		infile_.open( file_name, std::ios::binary );
 	
-		if( !m_infile.is_open() ){
+		if( !infile_.is_open() ){
                 	std::cerr<<"Failed To Open File !"<<std::endl;
 
                 	return false;
@@ -44,32 +44,32 @@ public:
 
 	void closeFile()
 	{
-		return m_infile.close();
+		return infile_.close();
 	}
 
 	template<typename T>
 	bool readOneFrame( slam::PointCloud<T>& point_cloud )
 	{
-		m_infile.read( reinterpret_cast<char *>( &point_cloud.time_stamp ), sizeof( point_cloud.time_stamp ) );
-        	m_infile.read( reinterpret_cast<char *>( &point_cloud.width ), sizeof( point_cloud.width ) );
-        	m_infile.read( reinterpret_cast<char *>( &point_cloud.height ), sizeof( point_cloud.height ) );
+		infile_.read( reinterpret_cast<char *>( &point_cloud.time_stamp ), sizeof( point_cloud.time_stamp ) );
+        	infile_.read( reinterpret_cast<char *>( &point_cloud.width ), sizeof( point_cloud.width ) );
+        	infile_.read( reinterpret_cast<char *>( &point_cloud.height ), sizeof( point_cloud.height ) );
 
 		point_cloud.points.resize( point_cloud.width * point_cloud.height );
 
-		m_infile.read( reinterpret_cast<char *>( point_cloud.points.data() ), point_cloud.points.size() * sizeof( T ) );
+		infile_.read( reinterpret_cast<char *>( point_cloud.points.data() ), point_cloud.points.size() * sizeof( T ) );
 		
 		return true;
 	}
 
 	const int endOfFile()
         {
-                return m_infile.eof();
+                return infile_.eof();
         }
 
 		
 
 private:
-	std::ifstream m_infile;
+	std::ifstream infile_;
 
 };
 

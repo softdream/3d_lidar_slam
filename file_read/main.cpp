@@ -4,14 +4,14 @@
 int main()
 {
 	std::cout<<"------------------ LIDAR DATA READ ------------------"<<std::endl;
-	record::FileRecord record( "3d_lidar_record_file" ); 
+	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/data/3d_lidar_record_file" ); 
 
 	int count = 0;
 	while( !record.endOfFile() ){
 	//while( count < 1 ){
 		std::cout<<"----------- frame -----------"<<std::endl;
 
-		slam::PointCloud<slam::Point3f> point_cloud;
+		slam::PointCloud<slam::Point3F> point_cloud;
 		record.readOneFrame( point_cloud );
 
 		std::cout<<"time_stamp = "<<point_cloud.time_stamp<<std::endl;
