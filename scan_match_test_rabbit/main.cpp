@@ -11,7 +11,7 @@ void loadLidarDataThread()
 {
 	std::cout<<"----------- frame -----------"<<std::endl;
 
-	slam::FileRecord record( "/home/arm/Test/3d_lidar_slam/scan_match_test2/rabbit2" );
+	slam::FileRecord record( "/home/riki/Test/3d_lidar_slam/3d_lidar_slam/scan_match_test2/data/rabbit" );
 	slam::PointCloud<slam::Point3F> first_point_cloud, second_point_cloud;
 	slam::Visualize visual;
 
@@ -32,21 +32,21 @@ void loadLidarDataThread()
 
 	// 5. scan match test
 	std::cout<<"------------------------------- SCAN MATCH TEST --------------------------------"<<std::endl;
-	/*slam::Point2PointICP<float> p2l_icp;
+	slam::Point2PointICP<float> p2point_icp;
 	Eigen::Matrix<float, 4, 4> transform = Eigen::Matrix<float, 4, 4>::Identity();
 
-	slam::scanMatch( p2l_icp, first_point_cloud, second_point_cloud, transform, 50 );
+	slam::scanMatch( p2point_icp, first_point_cloud, second_point_cloud, transform, 50 );
 
-        std::cout<<"estimated transformation by p2l icp: "<<std::endl<<transform<<std::endl;
-	*/
+        std::cout<<"estimated transformation by point 2 point icp: "<<std::endl<<transform<<std::endl;
+	
 
-	slam::Point2PlaneICP<float, slam::ThirdNormalPolicy> p2p_icp;
+	/*slam::Point2PlaneICP<float, slam::ThirdNormalPolicy> p2p_icp;
 	Eigen::Matrix<float, 4, 4> transform = Eigen::Matrix<float, 4, 4>::Identity();
 
 	slam::scanMatch( p2p_icp, first_point_cloud, second_point_cloud, transform, 4 );
 
         std::cout<<"estimated transformation by p2p icp: "<<std::endl<<transform<<std::endl;
-	
+	*/
 
 	std::cout<<"end !"<<std::endl;
 	record.closeFile();
